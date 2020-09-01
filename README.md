@@ -14,23 +14,23 @@ This version is build on the develop fork of [LeMonADE](https://github.com/tonim
  ./configure -DLEMONADE_DIR=/path/to/LeMonADE-Installation/
 ```
 
-# Idea or project discription 
+### Idea or project discription 
 
-# Authors 
+### Authors 
 * Toni Mueller
 
-# Parameter
+### Parameter
  
 
-# Analyzes 
+### Analyzes 
  
 
-# Known problems 
+### Known problems 
  
 
-# How to use it?
+### How to use it?
 
 
-# License
+### License
 See [LeMonADE-license](https://github.com/LeMonADE-project/LeMonADE/blob/master/LICENSE)
 
