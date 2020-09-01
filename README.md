@@ -1,4 +1,4 @@
-## LeMonADE - Radicalic Dimer Polymerisation 
+## LeMonADE - Project Name 
 
 This version is build on the develop fork of [LeMonADE](https://github.com/tonimueller).
 
@@ -13,15 +13,24 @@ This version is build on the develop fork of [LeMonADE](https://github.com/tonim
 ```shell
  ./configure -DLEMONADE_DIR=/path/to/LeMonADE-Installation/
 ```
+
+# Idea or project discription 
+
+# Authors 
+* Toni Mueller
+
 # Parameter
-* activation energy 
-* concentration of radicalic dimers 
+ 
 
 # Analyzes 
-* molecular weight distribution or equivalent raw data to produce this ( a bond table ) 
+ 
 
 # Known problems 
-* dimers which are connected could cause to curruptions in the bfm file, because consecutive 
-monomers would written into one line in the mcs write command. BUT connections across periodic 
-boundaries create bond greater square length 10...
+ 
+
+# How to use it?
+
+
+# License
+See [LeMonADE-license](https://github.com/LeMonADE-project/LeMonADE/blob/master/LICENSE)
 
