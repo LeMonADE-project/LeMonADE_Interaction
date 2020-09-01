@@ -34,11 +34,6 @@ for arg in "$@"; do
                         TESTOPTION=${arg#*=}
 			echo "LeMonADE is installed in "$TESTOPTION
 			;;
-        -DMYTOOLBOX_DIR=*)
-                        CMAKE_ARGUMENTS+=${arg}" "
-                        TESTOPTION=${arg#*=}
-			echo "MyToolBox is installed in "$TESTOPTION
-			;;
 	-DBUILDDIR=*)           
 			BUILDDIR=${arg#*=}
 			echo "Build directory set to "$BUILDDIR
