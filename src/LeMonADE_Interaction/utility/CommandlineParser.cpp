@@ -2,7 +2,7 @@
 #include<iostream>
 #include<sstream>
 #include<cstring>
-#include"CommandlineParser.h"
+#include <LeMonADE_Interaction/utility/CommandlineParser.h>
 
 CommandOptionObject::CommandOptionObject()
   :isActive(false),name(""),helpText(""),nParameters(0)

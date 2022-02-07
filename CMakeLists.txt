@@ -29,10 +29,10 @@
 #
 # CMAKE_MINIMUM_REQUIRED (VERSION 3.1)
 CMAKE_MINIMUM_REQUIRED (VERSION 2.8)
-PROJECT (LeMonADE_ROP)
-SET (APPLICATION_NAME "LeMonADE_PROJECTNAME") # 
+PROJECT (LeMonADE_ABStarNetworks)
+SET (APPLICATION_NAME "LeMonADE_Interaction") # 
 SET (APPLICATION_CODENAME "${PROJECT_NAME}")
-SET (APPLICATION_COPYRIGHT_YEARS "2020")
+SET (APPLICATION_COPYRIGHT_YEARS "2022")
 SET (APPLICATION_VERSION_MAJOR 1)
 SET (APPLICATION_VERSION_MINOR 0)
 SET (APPLICATION_VERSION_PATCH 0)
@@ -85,12 +85,30 @@ MESSAGE("USING CXX COMPILER FLAGS ${CMAKE_CXX_FLAGS_PROFIL}")
 MESSAGE("USING C COMPILER FLAGS ${CMAKE_C_FLAGS_PROFIL}")
 ENDIF(CMAKE_BUILD_TYPE STREQUAL "Release")
 
+#include cuda and set flags 
+find_package( CUDA REQUIRED )
+if( ${CUDA_VERSION_MAJOR} GREATER 7 )
+    set( NVCC_EXPERIMENTAL_FLAG "--expt" )
+else()
+    set( NVCC_EXPERIMENTAL_FLAG "-" )
+endif()
+# set( CUDA_ARCH "60")
+set( MINIMAL_CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}
+     -Xcompiler -fPIC,-Wno-unused-parameter
+    -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}
+    ${NVCC_EXPERIMENTAL_FLAG}-relaxed-constexpr
+)
+set( CUDA_NVCC_FLAGS ${MINIMAL_CUDA_NVCC_FLAGS} " --compiler-options -Wall,-Wextra" )
+
+
 #
-# Project Output Paths
+# Project input Paths
 #
 SET (EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
 SET (LEMONADE_INCLUDE_DIR "${LEMONADE_DIR}/include")
 SET (LEMONADE_LIBRARY_DIR "${LEMONADE_DIR}/lib")
+SET (LEMONADEGPU_INCLUDE_DIR "${LEMONADEGPU_DIR}/include")
+SET (LEMONADEGPU_LIBRARY_DIR "${LEMONADEGPU_DIR}/lib")
 #
 # Include the lemonade source library
 #
@@ -102,24 +120,50 @@ endif()
 if (NOT DEFINED LEMONADE_LIBRARY_DIR)
 message("LEMONADE_LIBRARY_DIR is not provided. If build fails, use -DLEMONADE_LIBRARY_DIR=/path/to/LeMonADE/lib/ or install to default location")
 endif()
+MESSAGE("LEMONADE_INCLUDE_DIR: " ${LEMONADE_INCLUDE_DIR})
+MESSAGE("LEMONADE_LIBRARY_DIR: " ${LEMONADE_LIBRARY_DIR})
+
 
 # MESSAGE("PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR})
 MESSAGE("PROJECT_BINARY_DIR: " ${PROJECT_BINARY_DIR})
 MESSAGE("EXECUTABLE_OUTPUT_PATH: " ${EXECUTABLE_OUTPUT_PATH})
-MESSAGE("LEMONADE_INCLUDE_DIR: " ${LEMONADE_INCLUDE_DIR})
-MESSAGE("LEMONADE_LIBRARY_DIR: " ${LEMONADE_LIBRARY_DIR})
 
 #
-# Include the lemonade and toolbox  library
+# Include the lemonade library
 #
 include_directories (${LEMONADE_INCLUDE_DIR})
 link_directories (${LEMONADE_LIBRARY_DIR})
 
 #
+# Include the lemonade-gpu source library
+#
+
+if (NOT DEFINED LEMONADEGPU_INCLUDE_DIR)
+message("LEMONADEGPU_INCLUDE_DIR is not provided. If build fails, use -DLEMONADEGPU_INCLUDE_DIR=/path/to/LeMonADEGPU/headers/ or install to default location")
+endif()
+
+if (NOT DEFINED LEMONADEGPU_LIBRARY_DIR)
+message("LEMONADEGPU_LIBRARY_DIR is not provided. If build fails, use -DLEMONADEGPU_LIBRARY_DIR=/path/to/LeMonADEGPU/lib/ or install to default location")
+endif()
+MESSAGE("LEMONADEGPU_INCLUDE_DIR: " ${LEMONADEGPU_INCLUDE_DIR})
+MESSAGE("LEMONADEGPU_LIBRARY_DIR: " ${LEMONADEGPU_LIBRARY_DIR})
+
+#
+# Include the lemonade-gpu library
+#
+include_directories (${LEMONADEGPU_INCLUDE_DIR})
+link_directories (${LEMONADEGPU_LIBRARY_DIR})
+
+#include directory
+LIST (APPEND CMAKE_PREFIX_PATH "${LEMONADE_INTERACTION_DIR}")
+INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/include/ ${LEMONADE_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} )
+
+#
 # add Build Targets
 #
 
-ADD_SUBDIRECTORY(projects)
+ADD_SUBDIRECTORY(executables)
+ADD_SUBDIRECTORY(src)
 
 #
 # Add option for building tests
@@ -129,31 +173,31 @@ if(LEMONADE_TESTS)
     add_subdirectory(tests)
 endif(LEMONADE_TESTS)
 
-#
+
 # Add Documentation Targets
-#
-# SET (DOC_INPUT_FILE_PATH "${LEMONADE_DIR}/docs/")
-# SET (DOC_OUTPUT_FILE_PATH "${CMAKE_BINARY_DIR}/docs/")
-# 
-# FIND_PACKAGE (Doxygen)
-# IF (DOXYGEN_FOUND)
-#     MESSAGE("Build documentation with: make docs")
-#     IF (EXISTS ${DOC_INPUT_FILE_PATH})
-#         MESSAGE("Existing File documentation with doxygen")
-#         configure_file(${DOC_INPUT_FILE_PATH}doxygen.conf ${DOC_OUTPUT_FILE_PATH}doxygen.conf @ONLY)
-#         configure_file(${DOC_INPUT_FILE_PATH}mainpage.dox ${DOC_OUTPUT_FILE_PATH}mainpage.dox @ONLY)
-#         configure_file(${DOC_INPUT_FILE_PATH}figures/ProgramStructure.jpg ${DOC_OUTPUT_FILE_PATH}figures/ProgramStructure.jpg COPYONLY)
-#         ADD_CUSTOM_TARGET(
-#             docs
-#             ${DOXYGEN_EXECUTABLE} ${DOC_OUTPUT_FILE_PATH}doxygen.conf
-#             WORKING_DIRECTORY ${DOC_OUTPUT_FILE_PATH}
-#             COMMENT "Generating doxygen project documentation." VERBATIM
-#         )
-#     ELSE (EXISTS ${DOC_INPUT_FILE_PATH})
-#         ADD_CUSTOM_TARGET(docs COMMENT "Doxyfile not found. Please generate a doxygen configuration file to use this target." VERBATIM)
-#     ENDIF (EXISTS ${DOC_INPUT_FILE_PATH})
-# ELSE (DOXYGEN_FOUND)
-#     ADD_CUSTOM_TARGET(docs COMMENT "Doxygen not found. Please install doxygen to use this target." VERBATIM)
-# ENDIF (DOXYGEN_FOUND)
+
+SET (DOC_INPUT_FILE_PATH "${LEMONADE_DIR}/docs/")
+SET (DOC_OUTPUT_FILE_PATH "${CMAKE_BINARY_DIR}/docs/")
+
+FIND_PACKAGE (Doxygen)
+IF (DOXYGEN_FOUND)
+    MESSAGE("Build documentation with: make docs")
+    IF (EXISTS ${DOC_INPUT_FILE_PATH})
+        MESSAGE("Existing File documentation with doxygen")
+        configure_file(${DOC_INPUT_FILE_PATH}doxygen.conf ${DOC_OUTPUT_FILE_PATH}doxygen.conf @ONLY)
+        configure_file(${DOC_INPUT_FILE_PATH}mainpage.dox ${DOC_OUTPUT_FILE_PATH}mainpage.dox @ONLY)
+        configure_file(${DOC_INPUT_FILE_PATH}figures/ProgramStructure.jpg ${DOC_OUTPUT_FILE_PATH}figures/ProgramStructure.jpg COPYONLY)
+        ADD_CUSTOM_TARGET(
+            docs
+            ${DOXYGEN_EXECUTABLE} ${DOC_OUTPUT_FILE_PATH}doxygen.conf
+            WORKING_DIRECTORY ${DOC_OUTPUT_FILE_PATH}
+            COMMENT "Generating doxygen project documentation." VERBATIM
+        )
+    ELSE (EXISTS ${DOC_INPUT_FILE_PATH})
+        ADD_CUSTOM_TARGET(docs COMMENT "Doxyfile not found. Please generate a doxygen configuration file to use this target." VERBATIM)
+    ENDIF (EXISTS ${DOC_INPUT_FILE_PATH})
+ELSE (DOXYGEN_FOUND)
+    ADD_CUSTOM_TARGET(docs COMMENT "Doxygen not found. Please install doxygen to use this target." VERBATIM)
+ENDIF (DOXYGEN_FOUND)
 
 

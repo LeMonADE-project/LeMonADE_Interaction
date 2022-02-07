@@ -20,7 +20,7 @@ BUILDDIR="build"
 #INSTALLDIR_OPTION="-DINSTALLDIR_LEMONADE=/usr/local"
 #TEST_ARGUMENT="-DLEMONADE_TESTS=OFF"
 CMAKE_ARGUMENTS=""
-
+CMAKE_ARGUMENTS="-DCUDA_CUDART_LIBRARY=/usr/local/cuda/lib64/libcudart.so "
 #parse command line arguments
 for arg in "$@"; do
     case $arg in
@@ -28,35 +28,40 @@ for arg in "$@"; do
             usage         
             exit
             ;;
-        
         -DLEMONADE_DIR=*)
-                        CMAKE_ARGUMENTS+=${arg}" "
-                        TESTOPTION=${arg#*=}
+			CMAKE_ARGUMENTS+=${arg}" "
+			TESTOPTION=${arg#*=}
 			echo "LeMonADE is installed in "$TESTOPTION
 			;;
-	-DBUILDDIR=*)           
+		-DLEMONADEGPU_DIR=*)
+			CMAKE_ARGUMENTS+=${arg}" "
+			TESTOPTION=${arg#*=}
+			echo "LeMonADE-GPU is installed in "$TESTOPTION
+			;;
+		-DBUILDDIR=*)           
 			BUILDDIR=${arg#*=}
 			echo "Build directory set to "$BUILDDIR
 			;;
-
-	-DLEMONADE_TESTS=*)
+		-DLEMONADE_TESTS=*)
 			CMAKE_ARGUMENTS+=${arg}" "
 			TESTOPTION=${arg#*=}
 			echo "Compiling tests set to "$TESTOPTION
-			;;
-			
-	-DCMAKE_BUILD_TYPE=*)
+			;;	
+		-DCMAKE_BUILD_TYPE=*)
 			CMAKE_ARGUMENTS+=${arg}" "
 			BUILDOPTION=${arg#*=}
 			echo "Build type set to "$BUILDOPTION
 			;;
-
-	* )                     		
+		-DCUDA_ARCH=*) 	
+			option="-DCUDA_ARCH:STRING="${arg#*=}" "
+			CMAKE_ARGUMENTS+=$option
+			TESTOPTION=${arg#*=}
+			echo "Build directory set to "$option " and " $TESTOPTION
+			;;
+		* )                     		
 			echo "unknown parameter"
 			usage         
 			exit
-
-
     esac
     shift           # shift the found arg away.
 done
@@ -91,7 +96,6 @@ all: ./${BUILDDIR}/Makefile
 clean:
 	@- \$(MAKE) --silent -C ${BUILDDIR} clean || true
 .PHONY: clean
-
 
 docs:
 	@  \$(MAKE) -C ${BUILDDIR} docs
