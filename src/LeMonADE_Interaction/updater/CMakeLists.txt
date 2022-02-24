@@ -25,16 +25,13 @@
 ##
 ## ----------------------------------------------------------------------------------
 
-# INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
+INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
-# SET(_src
-#     CommandlineParser.cpp
-#     )
-# FILE(_header
-#      ${CMAKE_SOURCE_DIR}/include/LeMonADE_Interaction/utility/CommandlineParser.h
-#     )
-# set_target_properties(obj_utility PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-# CUDA_ADD_LIBRARY(obj_utility OBJECT ${_src} ${_header} cuda )
-
-
-add_library( CommandlineParser CommandlineParser.cpp )
+SET(_src
+    UpdaterGPU_Intersection.cu
+   )
+FILE(_header
+     ${CMAKE_SOURCE_DIR}/include/LeMonADE_Intersection/updater/UpdaterGPU_Intersection.h
+    )
+set_target_properties(obj_updater PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+CUDA_ADD_LIBRARY(obj_updater OBJECT ${_src} ${_header} cuda )
