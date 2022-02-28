@@ -31,6 +31,7 @@ along with LeMonADE.  If not, see <http://www.gnu.org/licenses/>.
  *     Authors: Toni Mueller
  */
 #include <LeMonADE_Interaction/updater/UpdaterGPU_Interaction.h>
+
 #include <LeMonADEGPU/utility/cudacommon.hpp>
 #include <LeMonADEGPU/core/Method.h>
 #include <LeMonADEGPU/utility/DeleteMirroredObject.h>
@@ -42,6 +43,7 @@ along with LeMonADE.  If not, see <http://www.gnu.org/licenses/>.
 #include <LeMonADEGPU/utility/cudacommon.hpp>
 #include <LeMonADEGPU/utility/SelectiveLogger.hpp>
 #include <LeMonADEGPU/utility/graphColoring.tpp>
+#include <LeMonADEGPU/utility/graphColoring.h>
 #include <LeMonADEGPU/core/rngs/Saru.h>
 #include <LeMonADEGPU/core/MonomerEdges.h>
 #include <LeMonADEGPU/core/constants.cuh>
@@ -52,10 +54,16 @@ along with LeMonADE.  If not, see <http://www.gnu.org/licenses/>.
 using T_Flags            = UpdaterGPU_Interaction< uint8_t >::T_Flags         ;
 using T_Id               = UpdaterGPU_Interaction< uint8_t >::T_Id            ;
 using T_InteractionTag   = UpdaterGPU_Interaction< uint8_t >::T_InteractionTag;
+using T_Color            = UpdaterGPU_Interaction< uint8_t >::T_Color         ;
 __device__ __constant__ uint32_t DXTableNN_d[18];
 __device__ __constant__ uint32_t DYTableNN_d[18];
 __device__ __constant__ uint32_t DZTableNN_d[18];
-__device__ __constant__ double dcNNProbability[256][256];
+__device__ __constant__ double dcNNProbability[32][32];
+__global__ void  kernelPrintTagType(){
+
+    // auto T_Id id = blockIdx.x * blockDim.x + threadIdx.x;
+    printf("TagType[%d][%d]=%f\n",blockIdx.x,  threadIdx.x, dcNNProbability[blockIdx.x][threadIdx.x] );
+}
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 ///////Defintion of member functions for the interaction lattice //////////////
@@ -94,15 +102,24 @@ __global__ void kernelUpdateInteractionLattice
     for ( T_Id id = blockIdx.x * blockDim.x + threadIdx.x;
           id < nMonomers; id += gridDim.x * blockDim.x ){
         auto const r0 = dpPolymerSystem[ iOffset + id ];
-        auto const interactionTag= dInteractionTag[iOffset + id];
-		dpInteractionLattice[ met.getCurve().linearizeBoxVectorIndex( r0.x  , r0.y  , r0.z   ) ] = ( interactionTag+1 );
-        dpInteractionLattice[ met.getCurve().linearizeBoxVectorIndex( r0.x  , r0.y+1, r0.z   ) ] = ( interactionTag+1 );
-        dpInteractionLattice[ met.getCurve().linearizeBoxVectorIndex( r0.x  , r0.y  , r0.z+1 ) ] = ( interactionTag+1 );
-        dpInteractionLattice[ met.getCurve().linearizeBoxVectorIndex( r0.x  , r0.y+1, r0.z+1 ) ] = ( interactionTag+1 );
-        dpInteractionLattice[ met.getCurve().linearizeBoxVectorIndex( r0.x+1, r0.y  , r0.z   ) ] = ( interactionTag+1 );
-        dpInteractionLattice[ met.getCurve().linearizeBoxVectorIndex( r0.x+1, r0.y+1, r0.z   ) ] = ( interactionTag+1 );
-        dpInteractionLattice[ met.getCurve().linearizeBoxVectorIndex( r0.x+1, r0.y  , r0.z+1 ) ] = ( interactionTag+1 );
-        dpInteractionLattice[ met.getCurve().linearizeBoxVectorIndex( r0.x+1, r0.y+1, r0.z+1 ) ] = ( interactionTag+1 );
+        auto const interactionTag= dInteractionTag[iOffset + id]+1 ;
+        auto const x0Abs  = met.getCurve().linearizeBoxVectorIndexX( r0.x               );
+        auto const x0POne = met.getCurve().linearizeBoxVectorIndexX( r0.x + T_UCoordinateCuda(1) );
+    
+        auto const y0Abs  = met.getCurve().linearizeBoxVectorIndexY( r0.y                );
+        auto const y0POne = met.getCurve().linearizeBoxVectorIndexY( r0.y  + T_UCoordinateCuda(1) );
+    
+        auto const z0Abs  = met.getCurve().linearizeBoxVectorIndexZ( r0.z                );
+        auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( r0.z  + T_UCoordinateCuda(1) );
+        
+        dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] = interactionTag;
+        dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = interactionTag;
+        dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = interactionTag;
+        dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = interactionTag;
+        dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = interactionTag;
+        dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = interactionTag;
+        dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = interactionTag;
+        dpInteractionLattice[ x0POne + y0POne + z0POne ] = interactionTag;
     }
 }
  /**
@@ -151,14 +168,23 @@ __global__ void kernelResetInteractionLattice
     for ( T_Id idB = blockIdx.x * blockDim.x + threadIdx.x;
           idB < nMonomers; idB += gridDim.x * blockDim.x ){
         auto const r0 = dpPolymerSystem[ iOffset + idB ];
-        dpInteractionLattice[ met.getCurve().linearizeBoxVectorIndex( r0.x  , r0.y  , r0.z   ) ] = T_InteractionTag(0);
-        dpInteractionLattice[ met.getCurve().linearizeBoxVectorIndex( r0.x  , r0.y+1, r0.z   ) ] = T_InteractionTag(0);
-        dpInteractionLattice[ met.getCurve().linearizeBoxVectorIndex( r0.x  , r0.y  , r0.z+1 ) ] = T_InteractionTag(0);
-        dpInteractionLattice[ met.getCurve().linearizeBoxVectorIndex( r0.x  , r0.y+1, r0.z+1 ) ] = T_InteractionTag(0);
-        dpInteractionLattice[ met.getCurve().linearizeBoxVectorIndex( r0.x+1, r0.y  , r0.z   ) ] = T_InteractionTag(0);
-        dpInteractionLattice[ met.getCurve().linearizeBoxVectorIndex( r0.x+1, r0.y+1, r0.z   ) ] = T_InteractionTag(0);
-        dpInteractionLattice[ met.getCurve().linearizeBoxVectorIndex( r0.x+1, r0.y  , r0.z+1 ) ] = T_InteractionTag(0);
-        dpInteractionLattice[ met.getCurve().linearizeBoxVectorIndex( r0.x+1, r0.y+1, r0.z+1 ) ] = T_InteractionTag(0);
+        auto const x0Abs  = met.getCurve().linearizeBoxVectorIndexX( r0.x               );
+        auto const x0POne = met.getCurve().linearizeBoxVectorIndexX( r0.x + T_UCoordinateCuda(1) );
+    
+        auto const y0Abs  = met.getCurve().linearizeBoxVectorIndexY( r0.y                );
+        auto const y0POne = met.getCurve().linearizeBoxVectorIndexY( r0.y  + T_UCoordinateCuda(1) );
+    
+        auto const z0Abs  = met.getCurve().linearizeBoxVectorIndexZ( r0.z                );
+        auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( r0.z  + T_UCoordinateCuda(1) );
+        T_InteractionTag const interactionTag(0);
+        dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] = interactionTag;
+        dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = interactionTag;
+        dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = interactionTag;
+        dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = interactionTag;
+        dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = interactionTag;
+        dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = interactionTag;
+        dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = interactionTag;
+        dpInteractionLattice[ x0POne + y0POne + z0POne ] = interactionTag;
     }
 }
 template< typename T_UCoordinateCuda >
@@ -178,7 +204,7 @@ void UpdaterGPU_Interaction< T_UCoordinateCuda >::launch_resetInteractionLattice
 		kernelResetInteractionLattice<T_UCoordinateCuda><<<nBlocks,nThreads,0,mStream>>>(
 		mPolymerSystemSorted->gpu     ,            
 		mviSubGroupOffsets[ iSpecies ], 
-		mLatticeInteractionTag->gpu              ,
+		mLatticeInteractionTag->gpu   ,
 		mnElementsInGroup[ iSpecies ] ,                        
 		met
 		);
@@ -236,7 +262,6 @@ __device__ inline double calcInteractionProbability(
     uint32_t            const & z0        ,
     T_Flags             const & axis      ,
     Method		        const & met       
-
 ){
     auto const dx = DXTableNN_d[ axis ];   // 0 or 1 for  -1,1 
     auto const dy = DYTableNN_d[ axis ];   // 0 or 1 for  -1,1 
@@ -260,8 +285,9 @@ __device__ inline double calcInteractionProbability(
     auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( z0 + dz + uint32_t(1) );
     auto const z0PTwo = met.getCurve().linearizeBoxVectorIndexZ( z0 + dz + uint32_t(2) );
 
-    auto typeA(dpInteractionLattice[ x0Abs + y0Abs + z0Abs ) ]);
-    double prop(0);
+    auto typeA(dpInteractionLattice[ x0Abs + y0Abs + z0Abs ] );
+    // printf("tagType: %d %d %.10f\n",typeA, dpInteractionLattice[ x0MTwo + y0Abs  + z0Abs  ], getProbability(typeA, dpInteractionLattice[ x0MTwo + y0Abs  + z0Abs  ]));
+    double prop(1);
     switch ( axis >> 1 ){
         case 0 : //+-x
             prop*=getProbability(typeA, dpInteractionLattice[ x0MTwo + y0Abs  + z0Abs  ]);
@@ -292,7 +318,8 @@ __device__ inline double calcInteractionProbability(
             prop/=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ]);
             prop/=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0POne + z0POne ]);
         
-            prop*=(dx==0)? (-1) : 1;
+            // prop*=(dx==0)? (-1) : 1;
+            if(dx==0){prop=1./prop;}
             break;
         case 1 : //+-y
             prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0MTwo + z0Abs  ]);
@@ -323,7 +350,8 @@ __device__ inline double calcInteractionProbability(
             prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ]);
             prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0POne ]);
                 
-            prop*=(dy==0)? (-1) : 1;                              
+            // prop*=(dy==0)? (-1) : 1;      
+            if(dy==0){prop=1./prop;}                        
             break;
         case 2 : //+-z
             prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0Abs  + z0MTwo ]);
@@ -354,7 +382,8 @@ __device__ inline double calcInteractionProbability(
             prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0POne + z0PTwo ]);
             prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0POne + z0PTwo ]);
         
-            prop*=(dz==0)? (-1) : 1;
+            // prop*=(dz==0)? (-1) : 1;
+            if(dz==0){prop=1./prop;}
             break;
         //TODO : Add diagonal moves 
     }
@@ -366,11 +395,9 @@ __device__ inline double calcInteractionProbability(
  * @brief add interaction to the species movements
  * 
  * @tparam T_UCoordinateCuda 
- * @tparam moveSize 
  * @param dpPolymerSystem 
  * @param dpPolymerFlags 
  * @param iOffset 
- * @param dpLatticeTmp 
  * @param nMonomers 
  * @param rSeed 
  * @param rGlobalIteration 
@@ -390,8 +417,6 @@ __device__ inline double calcInteractionProbability(
      uint64_t            const              rGlobalIteration        ,
      Method              const              met
  ){
-     uint32_t rn;
-     double rnd;
      for ( auto iMonomer = blockIdx.x * blockDim.x + threadIdx.x;
            iMonomer < nMonomers; iMonomer += gridDim.x * blockDim.x ){
         auto const properties = dpPolymerFlags[ iMonomer ];
@@ -400,148 +425,138 @@ __device__ inline double calcInteractionProbability(
 
         Saru rng(rGlobalIteration,iMonomer+iOffset,rSeed);
         auto const r0 = dpPolymerSystem[ iMonomer ];
-        auto const direction = properties & T_Flags(31); // 7=0b111 31=0b11111
-         
-        if ( ! ( calcInteractionProbability( dpInteractionLattice, r0.x, r0.y, r0.z, direction, met ) > rng.rng_d() ) ) {
+        auto direction = properties & T_Flags(31); // 7=0b111 31=0b11111
+        auto const intProp(calcInteractionProbability( dpInteractionLattice, r0.x, r0.y, r0.z, direction, met ));
+        // printf("intProp %d %.15f\n",iMonomer, intProp);
+        if ( ! ( rng.rng_d() < intProp  ) ) {
              /* move is not allowed due to the interaction  */
-             typename CudaVec4< T_UCoordinateCuda >::value_type const r1 = {
-                T_UCoordinateCuda( r0.x + DXTable_d[ direction ] ),
-                T_UCoordinateCuda( r0.y + DYTable_d[ direction ] ),
-                T_UCoordinateCuda( r0.z + DZTable_d[ direction ] )
-            };
-             direction &= T_Flags(32) /* cannot -move-modification */;
+            direction &= T_Flags(32) /* cannot -move-modification */;
+            dpPolymerFlags[ iMonomer ] = direction;
         }
-        dpPolymerFlags[ iMonomer ] = direction;
+        
      }
  }
 
  template< typename T_UCoordinateCuda> 
- void UpdaterGPUScBFM< T_UCoordinateCuda >::launch_CheckSpeciesInteraction(
+ void UpdaterGPU_Interaction< T_UCoordinateCuda >::launch_CheckSpeciesInteraction(
     const size_t nBlocks, const size_t nThreads, 
     const size_t iSpecies, const uint64_t seed)
  {
     kernelSimulationScBFMCheckSpeciesInteraction< T_UCoordinateCuda > 
     <<< nBlocks, nThreads, 0, mStream >>>(     
-    mLatticeInteractionTag->gpu,           
-    mPolymerSystemSorted->gpu + mviSubGroupOffsets[ iSpecies ],                                     
-    mPolymerFlags->gpu + mviSubGroupOffsets[ iSpecies ],           
-    mviSubGroupOffsets[ iSpecies ],                                
-    mnElementsInGroup[ iSpecies ],                                 
-    seed, 
-    hGlobalIterator,                                         
-    met
+        mLatticeInteractionTag->gpu,           
+        mPolymerSystemSorted->gpu + mviSubGroupOffsets[ iSpecies ],                                     
+        mPolymerFlags->gpu + mviSubGroupOffsets[ iSpecies ],           
+        mviSubGroupOffsets[ iSpecies ],                                
+        mnElementsInGroup[ iSpecies ],                                 
+        seed, 
+        hGlobalIterator,                                         
+        met
     );
    hGlobalIterator++;
  }
 
 template< typename T_UCoordinateCuda >
-__global__ void kernelApplyInteraction
-T_InteractionTag  * const __restrict__ dpInteractionLattice,
+__global__ void kernelApplyInteraction(
+T_InteractionTag  * const __restrict__ dpInteractionLattice    ,
 typename CudaVec4< T_UCoordinateCuda >::value_type
             const * const __restrict__ dpPolymerSystem         ,
 T_Flags           * const              dpPolymerFlags          ,
-uint32_t            const              iOffset                 ,
 T_Id                const              nMonomers               ,
-uint64_t            const              rSeed                   ,
-uint64_t            const              rGlobalIteration        ,
 Method              const              met
 ){
-    for ( auto i = blockIdx.x * blockDim.x + threadIdx.x;
-          i < nMonomers; i += gridDim.x * blockDim.x ){
+    for ( auto iMonomer = blockIdx.x * blockDim.x + threadIdx.x;
+        iMonomer < nMonomers; iMonomer += gridDim.x * blockDim.x ){
         auto const properties = dpPolymerFlags[ iMonomer ];
         if ( ! ( properties & T_Flags(32) ) ) // check if can-move flag is set
             continue; 
         auto const direction = properties & T_Flags(31); // 7=0b111 31=0b11111
         auto const r0 = dpPolymerSystem[ iMonomer ];
+    
+        auto const x0MOne = met.getCurve().linearizeBoxVectorIndexX( r0.x - T_UCoordinateCuda(1) );
+        auto const x0Abs  = met.getCurve().linearizeBoxVectorIndexX( r0.x                        );
+        auto const x0POne = met.getCurve().linearizeBoxVectorIndexX( r0.x + T_UCoordinateCuda(1) );
+        auto const x0PTwo = met.getCurve().linearizeBoxVectorIndexX( r0.x + T_UCoordinateCuda(2) );
+    
+        auto const y0MOne = met.getCurve().linearizeBoxVectorIndexY( r0.y - T_UCoordinateCuda(1) );
+        auto const y0Abs  = met.getCurve().linearizeBoxVectorIndexY( r0.y                        );
+        auto const y0POne = met.getCurve().linearizeBoxVectorIndexY( r0.y + T_UCoordinateCuda(1) );
+        auto const y0PTwo = met.getCurve().linearizeBoxVectorIndexY( r0.y + T_UCoordinateCuda(2) );
+    
+        auto const z0MOne = met.getCurve().linearizeBoxVectorIndexZ( r0.z - T_UCoordinateCuda(1) );
+        auto const z0Abs  = met.getCurve().linearizeBoxVectorIndexZ( r0.z                        );
+        auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( r0.z + T_UCoordinateCuda(1) );
+        auto const z0PTwo = met.getCurve().linearizeBoxVectorIndexZ( r0.z + T_UCoordinateCuda(2) );
 
-        auto const dx = DXTableNN_d[ axis ];   // 0 or 1 for  -1,1 
-        auto const dy = DYTableNN_d[ axis ];   // 0 or 1 for  -1,1 
-        auto const dz = DZTableNN_d[ axis ];   // 0 or 1 for  -1,1 
-    
-        auto const x0MOne = met.getCurve().linearizeBoxVectorIndexX( r0.x - uint32_t(1) );
-        auto const x0Abs  = met.getCurve().linearizeBoxVectorIndexX( r0.x               );
-        auto const x0POne = met.getCurve().linearizeBoxVectorIndexX( r0.x + uint32_t(1) );
-        auto const x0PTwo = met.getCurve().linearizeBoxVectorIndexX( r0.x + uint32_t(2) );
-    
-        auto const y0MOne = met.getCurve().linearizeBoxVectorIndexY( r0.y - uint32_t(1) );
-        auto const y0Abs  = met.getCurve().linearizeBoxVectorIndexY( r0.y               );
-        auto const y0POne = met.getCurve().linearizeBoxVectorIndexY( r0.y + uint32_t(1) );
-        auto const y0PTwo = met.getCurve().linearizeBoxVectorIndexY( r0.y + uint32_t(2) );
-    
-        auto const z0MOne = met.getCurve().linearizeBoxVectorIndexZ( r0.z - uint32_t(1) );
-        auto const z0Abs  = met.getCurve().linearizeBoxVectorIndexZ( r0.z               );
-        auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( r0.z + uint32_t(1) );
-        auto const z0PTwo = met.getCurve().linearizeBoxVectorIndexZ( r0.z + uint32_t(2) );
-
-        auto nnTag1(dpInteractionLattice[ x0Abs  ,y0Abs  , z0Abs   ) ]);
+        auto nnTag1(dpInteractionLattice[ x0Abs  ,y0Abs  , z0Abs  ]);
         auto nnTag2(T_InteractionTag(0));
         
         switch(direction){ 
-            case 0: 
-                dpInteractionLattice[ x0MOne + y0Abs  + z0Abs  ) ] = nnTag1;
-                dpInteractionLattice[ x0MOne + y0POne + z0Abs  ) ] = nnTag1;
-                dpInteractionLattice[ x0MOne + y0Abs  + z0POne ) ] = nnTag1;
-                dpInteractionLattice[ x0MOne + y0POne + z0POne ) ] = nnTag1;
+            case 0: //-x
+                dpInteractionLattice[ x0MOne + y0Abs  + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0MOne + y0POne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0MOne + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0MOne + y0POne + z0POne ] = nnTag1;
                 
-                dpInteractionLattice[ x0POne + y0Abs  + z0Abs ) ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0POne + z0Abs ) ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0Abs  + z0POne ) ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0POne + z0POne ) ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0POne + z0POne ] = nnTag2;
                 break;
-            case 1: 
-                dpInteractionLattice[ x0PTwo + y0Abs  + z0Abs  ) ] = nnTag1;
-                dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ) ] = nnTag1;
-                dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ) ] = nnTag1;
-                dpInteractionLattice[ x0PTwo + y0POne + z0POne ) ] = nnTag1;
+            case 1: //+x
+                dpInteractionLattice[ x0PTwo + y0Abs  + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0PTwo + y0POne + z0POne ] = nnTag1;
 
-                dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ) ] = nnTag2;
-                dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ) ] = nnTag2;
-                dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ) ] = nnTag2;
-                dpInteractionLattice[ x0Abs  + y0POne + z0POne ) ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag2;
                 break;
-            case 2: 
-                dpInteractionLattice[ x0Abs  + y0MOne + z0Abs  ) ] = nnTag1;
-                dpInteractionLattice[ x0POne + y0MOne + z0Abs  ) ] = nnTag1;
-                dpInteractionLattice[ x0Abs  + y0MOne + z0POne ) ] = nnTag1;
-                dpInteractionLattice[ x0POne + y0MOne + z0POne ) ] = nnTag1;
+            case 2: //-y
+                dpInteractionLattice[ x0Abs  + y0MOne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0MOne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0MOne + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0MOne + z0POne ] = nnTag1;
                 
-                dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ) ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0POne + z0Abs  ) ] = nnTag2;
-                dpInteractionLattice[ x0Abs  + y0POne + z0POne ) ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0POne + z0POne ) ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0POne + z0POne ] = nnTag2;
                 break;
-            case 3: 
-                dpInteractionLattice[ x0Abs  + y0PTwo + z0Abs  ) ] = nnTag1;
-                dpInteractionLattice[ x0PTwo + y0PTwo + z0Abs  ) ] = nnTag1;
-                dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ) ] = nnTag1;
-                dpInteractionLattice[ x0PTwo + y0PTwo + z0POne ) ] = nnTag1;
+            case 3: //+y
+                dpInteractionLattice[ x0Abs  + y0PTwo + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0PTwo + y0PTwo + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0PTwo + y0PTwo + z0POne ] = nnTag1;
 
-                dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ) ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ) ] = nnTag2;
-                dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ) ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0Abs  + z0POne ) ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag2;
                 break;
-            case 4: 
-                dpInteractionLattice[ x0Abs  + y0Abs  + z0MOne ) ] = nnTag1;
-                dpInteractionLattice[ x0Abs  + y0POne + z0MOne ) ] = nnTag1;
-                dpInteractionLattice[ x0POne + y0Abs  + z0MOne ) ] = nnTag1;
-                dpInteractionLattice[ x0POne + y0POne + z0MOne ) ] = nnTag1;
+            case 4: //-z
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0POne + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs  + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0POne + z0MOne ] = nnTag1;
                 
-                dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ) ] = nnTag2;
-                dpInteractionLattice[ x0Abs  + y0POne + z0POne ) ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0Abs  + z0POne ) ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0POne + z0POne ) ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0POne + z0POne ] = nnTag2;
                 break;
-            case 5: 
-                dpInteractionLattice[ x0Abs  + y0Abs  + z0PTwo ) ] = nnTag1;
-                dpInteractionLattice[ x0Abs  + y0POne + z0PTwo ) ] = nnTag1;
-                dpInteractionLattice[ x0POne + y0Abs  + z0PTwo ) ] = nnTag1;
-                dpInteractionLattice[ x0POne + y0POne + z0PTwo ) ] = nnTag1;
+            case 5: //+z
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0PTwo ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0POne + z0PTwo ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs  + z0PTwo ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0POne + z0PTwo ] = nnTag1;
 
-                dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ) ] = nnTag2;
-                dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ) ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ) ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0POne + z0Abs  ) ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag2;
                 break;
         }
     }
@@ -550,14 +565,11 @@ template< typename T_UCoordinateCuda >
 void UpdaterGPU_Interaction< T_UCoordinateCuda >::launch_ApplyInteraction(
   const size_t nBlocks , const size_t   nThreads, const size_t iSpecies
 ){ 
-	kernelApplyConnection<T_UCoordinateCuda><<<nBlocks,nThreads,0,mStream>>>(
+	kernelApplyInteraction<T_UCoordinateCuda><<<nBlocks,nThreads,0,mStream>>>(
         mLatticeInteractionTag->gpu,           
         mPolymerSystemSorted->gpu + mviSubGroupOffsets[ iSpecies ],                                     
-        mPolymerFlags->gpu + mviSubGroupOffsets[ iSpecies ],           
-        mviSubGroupOffsets[ iSpecies ],                                
-        mnElementsInGroup[ iSpecies ],                                 
-        seed, 
-        hGlobalIterator,                                         
+        mPolymerFlags->gpu + mviSubGroupOffsets[ iSpecies ],                                         
+        mnElementsInGroup[ iSpecies ],                           
         met
 	);
 }
@@ -577,13 +589,13 @@ mInteractionTag        	( NULL )
      * the output as "Info" log level
      */
     mLog.file( __FILENAME__ );
-    mLog.deactivate( "Check"     );
-    mLog.deactivate( "Error"     );
-    mLog.deactivate( "Info"      );
+    mLog.activate( "Check"     );
+    mLog.activate( "Error"     );
+    mLog.activate( "Info"      );
     mLog.deactivate( "Stats"     );
     mLog.deactivate( "Warning"   );
-    for(size_t n=0;n<256;n++){
-      	for(size_t m=0;m<256;m++){	
+    for(size_t n=0;n<maxInteractionType;n++){
+      	for(size_t m=0;m<maxInteractionType;m++){	
 			interactionTable[m][n]=0.0;
 			probabilityLookup[m][n]=1.0;
         }
@@ -616,27 +628,107 @@ void UpdaterGPU_Interaction<T_UCoordinateCuda>::cleanup(){
 template < typename T_UCoordinateCuda >
 void UpdaterGPU_Interaction<T_UCoordinateCuda>::initialize(){
 	BaseClass::setAutoColoring(false);
-	// mLog( "Info" )<< "Start manual coloring of the graph...\n" ;
-	// AStarSpecies = 0; 
-	// BStarSpecies = 1; 
-	// StarCenterSpecies = 2; 
-	// //do manual coloring 
-	// for ( uint32_t i = 0; i < mnAllMonomers ; i++){
-	// 	T_Id color(( i % 2)==0 ? 3 :4);
-	// 	if ( mNeighbors->host[ i ].size == nBranches ) color=2;
-	// 	mGroupIds.push_back(color); 
+    mLog( "Info" )<< "Start manual coloring of the graph...\n" ;
+    bool const bUniformColors = true; // setting this to true should yield more performance as the kernels are uniformly utilized
+    //map with: key=interactionTag, values=number of Monomers with interaction TAg
+    std::map<uint32_t,std::vector<uint32_t> > newToOldNNIDs; 
+    std::vector<uint32_t> oldToNewNNIDs(mnAllMonomers,0); 
+    for(auto i=0; i < mnAllMonomers; i++){
+        newToOldNNIDs[getAttributeTag(i)].push_back(i);
+        oldToNewNNIDs[i]=newToOldNNIDs[getAttributeTag(i)].size()-1;
+    }
+    for(auto i=0; i < 20; i++)
+        mLog( "Info" )<< "oldToNewNNIDs["<<i<<"]="<< oldToNewNNIDs[i]<<"\n" ; 
+    //vector with the interaction Tags
+    std::vector<uint32_t> interactionTags; 
+    //offset of the number of monomers with the interaction tag 
+    std::vector<uint32_t> interactionTagsOffset; 
+    //inteaction tag sorted 
+    //interaction Tag are for example : 2 3 7 , which are sorted to 0 1 2
+    std::map<uint32_t,uint32_t> interactionTagSorted;
+    uint32_t tmpCounter(0);
+    for(auto it=newToOldNNIDs.begin(); it!=newToOldNNIDs.end();it++){
+        interactionTags.push_back(it->first );
+        interactionTagSorted[it->first]=tmpCounter;
+        tmpCounter++;
+    }
+    interactionTagsOffset.push_back(0);
+    for(auto i=1; i< interactionTags.size();i++){
+        interactionTagsOffset.push_back(interactionTagsOffset[i-1] + newToOldNNIDs.at(interactionTags[i]).size());
+    }
 
-	// }
-	// uint32_t nAMonomers(nAStars*(1+nBranches*branchLenghtA) );
-	// for (uint32_t i = 0; i < nReactiveMonomers; i++){
-	// 	mGroupIds[mNewToOldReactiveID[i]] = (mNewToOldReactiveID[i] < nAMonomers ) ? AStarSpecies : BStarSpecies ;
-	// 	if (i <20 ) 
-	// 	mLog( "Info" )<< "mGroups[" << mNewToOldReactiveID[i] << "]= "<< mGroupIds[mNewToOldReactiveID[i]] <<"\n" ;
-	// }
-	// mLog( "Info" )<< "Start manual coloring of the graph...done\n" ;
+    mLog( "Info" )<< "There are "<< interactionTags.size()<<" interaction species.\n" ;
+    for (auto i=0; i < interactionTags.size(); i++)
+        mLog( "Info" )<< "interaction species type "<< interactionTags[i]<<"->"<<interactionTagSorted[interactionTags[i]]<< " size="<<newToOldNNIDs.at(interactionTags[i]).size() << "\n" ;
+    //create a neighboring list which contains only on interaction tag species
+    std::vector< std::vector< MonomerEdges > >  mSpeciesNeighbors;
+    for (auto i=0; i < interactionTags.size(); i++){
+        std::vector< MonomerEdges > neighbors(newToOldNNIDs[interactionTags[i]].size(),MonomerEdges());
+        mSpeciesNeighbors.push_back(neighbors);
+    }
+    for(auto i=0; i < mnAllMonomers; i++){
+        auto attribute(interactionTagSorted.at(getAttributeTag(i)));
+        auto oldID(i);
+        MonomerEdges oldNeighbors(mNeighbors->host[oldID]);
+        MonomerEdges newNeighbors;
+        newNeighbors.size=0;
+        for(auto j=0;j<oldNeighbors.size;j++){
+            if (getAttributeTag(oldNeighbors.neighborIds[j]) != getAttributeTag(i) ) continue;
+            auto neighborID( oldToNewNNIDs[ oldNeighbors.neighborIds[j] ] );            
+            newNeighbors.neighborIds[newNeighbors.size]=neighborID;
+            newNeighbors.size++;
+        }
+        auto newID(oldToNewNNIDs[oldID]);
+        if (i <20 )
+            std::cout << oldID << " " << newID <<  " " << attribute<<std::endl;
+        mSpeciesNeighbors[attribute][newID]=newNeighbors;
+    }
+    // use the automatic coloring algorithm within one interaction tag species
+    std::vector< std::vector< T_Color > > mSpeciesGroupIds;
+    for (auto i=0; i < interactionTags.size(); i++){
+        mSpeciesGroupIds.push_back(
+            graphColoring< std::vector<MonomerEdges> const, T_Id, T_Color >(
+                mSpeciesNeighbors[i], 
+                newToOldNNIDs.at(interactionTags.at(i)).size(), 
+                bUniformColors,
+                []( std::vector<MonomerEdges> const & x, T_Id const & i ){ return x[i].size; },
+                []( std::vector<MonomerEdges> const & x, T_Id const & i, size_t const & j ){ return x[i].neighborIds[j]; }
+            )
+        );
+    }
+    //resort the colors to the initial ids 
+    mGroupIds.resize(mnAllMonomers,0);
+    // for (auto i=0; i < mnAllMonomers; i++){
+    auto colorOffset(0);
+    for (auto i=0; i < mSpeciesGroupIds.size(); i++){
+        auto attribute(interactionTags[i]);
+        std::map<uint32_t,uint32_t> usedColors;
+        for(auto j=0; j < mSpeciesGroupIds[i].size(); j++){            
+            auto oldID(newToOldNNIDs[attribute][j]);
+            mGroupIds[oldID]=mSpeciesGroupIds[i][j]+colorOffset;
+            usedColors[mGroupIds[oldID]]++;
+        }
+        colorOffset+=usedColors.size();
+    }
+    mLog( "Info" )<< "Colors:\n";
+    for(auto i=0; i <20;i++)
+		mLog( "Info" )<< "mGroups[" << i << "]= "<< mGroupIds[i] <<"\n" ;
+
+	mLog( "Info" )<< "Start manual coloring of the graph...done\n" ;
 
 	mLog( "Info" )<< "Initialize baseclass \n" ;
 	BaseClass::initialize();
+    size_t nBytesInteractionTagTmp = mnMonomersPadded* sizeof(T_InteractionTag);
+    mLog( "Info" ) << "Allocate "<< nBytesInteractionTagTmp/1024<<"kB  memory for mInteractionTag \n";  
+    mInteractionTag  = new MirroredTexture< T_InteractionTag >( nBytesInteractionTagTmp, mStream );
+    miToiNew->popAsync();
+	CUDA_ERROR( cudaStreamSynchronize( mStream ) );
+    for( auto i=0;i<mnAllMonomers; i++)
+        mInteractionTag->host[miToiNew->host[i]]=static_cast<uint8_t>(getAttributeTag(i)); 
+    mInteractionTag->push(0);
+    cudaStreamSynchronize( mStream );
+
+
 	{ decltype( dcBoxX  ) x = mBoxX  ; CUDA_ERROR( cudaMemcpyToSymbol( dcBoxX  , &x, sizeof(x) ) ); }
 	{ decltype( dcBoxY  ) x = mBoxY  ; CUDA_ERROR( cudaMemcpyToSymbol( dcBoxY  , &x, sizeof(x) ) ); }
 	{ decltype( dcBoxZ  ) x = mBoxZ  ; CUDA_ERROR( cudaMemcpyToSymbol( dcBoxZ  , &x, sizeof(x) ) ); }
@@ -652,11 +744,20 @@ void UpdaterGPU_Interaction<T_UCoordinateCuda>::initialize(){
 	mLog( "Info" )<< "Initialize baseclass.done. \n" ;	
 
 	initializeInteractionLattice();
+    auto const nSpecies = mnElementsInGroup.size();
+    for ( uint32_t iSpecies = 0; iSpecies < nSpecies; ++iSpecies ){
+        /* randomly choose which monomer group to advance */
+        auto const nThreads = 128;
+        auto const nBlocks  = ceilDiv( mnElementsInGroup[ iSpecies ], nThreads );
+        launch_initializeInteractionLattice(nBlocks,nThreads,iSpecies);
+    }
+    checkInteractionLatticeOccupation();
 	mLog( "Info" )<< "Initialize lattice.done. \n" ;
     for (auto i=0; i<20; i++ )
         for (auto j=0; j<20; j++ )
             mLog( "Info" )<< "interaction: probabilityLookup[" <<  i  <<","<<j << "]="<< probabilityLookup[i+1][j+1]  <<"\n";
-    CUDA_ERROR( cudaMemcpyToSymbol( dcNNProbability, probabilityLookup, sizeof(probabilityLookup) );
+    CUDA_ERROR( cudaMemcpyToSymbol( dcNNProbability, probabilityLookup, sizeof(probabilityLookup) ));
+    kernelPrintTagType<<<20,20>>>();
 	miNewToi->popAsync();
 	CUDA_ERROR( cudaStreamSynchronize( mStream ) ); // finish e.g. initializations
 }
@@ -664,13 +765,15 @@ void UpdaterGPU_Interaction<T_UCoordinateCuda>::initialize(){
 //implement setter function for the interaction tags and their energy //////////
 ////////////////////////////////////////////////////////////////////////////////
 template< typename T_UCoordinateCuda >
-void UpdaterGPU_Interaction<T_UCoordinateCuda>::setInteractionTag(uint32_t id, 
-    uint8_t tag ){setAttributeTag(id, tag);}
-
+void UpdaterGPU_Interaction<T_UCoordinateCuda>::setInteractionTag(
+    uint32_t id, uint8_t tag ){
+    setAttributeTag(id, tag);
+}
+////////////////////////////////////////////////////////////////////////////////
 template< typename T_UCoordinateCuda >
-void UpdaterGPU_Interaction<T_UCoordinateCuda>::setNNInteraction(int32_t typeA, 
-    int32_t typeB, double energy){
-    if(0<typeA && typeA<=255 && 0<typeB && typeB<=255){
+void UpdaterGPU_Interaction<T_UCoordinateCuda>::setNNInteraction(
+    int32_t typeA, int32_t typeB, double energy){
+    if(0<typeA && typeA<=maxInteractionType && 0<typeB && typeB<=maxInteractionType){
         interactionTable[typeA+1][typeB+1]=energy;
         interactionTable[typeB+1][typeA+1]=energy;
         probabilityLookup[typeA+1][typeB+1]=exp(-energy);
@@ -684,11 +787,11 @@ void UpdaterGPU_Interaction<T_UCoordinateCuda>::setNNInteraction(int32_t typeA,
         throw std::runtime_error(errormessage.str());
     }
 }
-
+////////////////////////////////////////////////////////////////////////////////
 template< typename T_UCoordinateCuda >
-void UpdaterGPU_Interaction<T_UCoordinateCuda>::getNNInteraction(int32_t typeA, 
-    int32_t typeB) const{
-    if(0<typeA && typeA<=255 && 0<typeB && typeB<=255)
+double UpdaterGPU_Interaction<T_UCoordinateCuda>::getNNInteraction(int32_t typeA, 
+    int32_t typeB) const {
+    if(0<typeA && typeA<=maxInteractionType && 0<typeB && typeB<=maxInteractionType)
         return interactionTable[typeA+1][typeB+1];
     else{
         std::stringstream errormessage;
@@ -795,9 +898,16 @@ void UpdaterGPU_Interaction< T_UCoordinateCuda >::runSimulationOnGPU(
         << "mcs = " << nMonteCarloSteps  << "  speed [performed monomer try and move/s] = MCS*N/t: "
         << nMonteCarloSteps * ( mnAllMonomers / dt )  << "     runtime[s]:" << dt << "\n";
 	checkSystem(); // no-op if "Check"-level deactivated
+    BaseClass::doCopyBack();
 }
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 template class UpdaterGPU_Interaction< uint8_t  >;
 template class UpdaterGPU_Interaction< uint16_t >;
 template class UpdaterGPU_Interaction< uint32_t >;
 template class UpdaterGPU_Interaction<  int16_t >;
-// template class UpdaterGPU_Interaction<  int32_t >;
+template class UpdaterGPU_Interaction<  int32_t >;
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////

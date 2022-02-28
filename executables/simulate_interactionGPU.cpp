@@ -28,6 +28,7 @@ int main(int argc, char* argv[])
 	std::string input("config.bfm");
 	std::string output("output.bfm");
     double energy = 10.0; 
+	int      iGpuToUse       = 0;
 	
 	try 
 	{
@@ -72,7 +73,7 @@ int main(int argc, char* argv[])
     RandomNumberGenerators rng;
     rng.seedAll();
 	auto const pUpdaterGpu = new WrapperUpdaterGPU_Interaction<IngredientsType>( ingredients, interval );
-	pUpdaterGpu->setGpu( 0 );
+	pUpdaterGpu->setGpu( iGpuToUse );
 	pUpdaterGpu->activateLogging( "Error"     );
 	//pUpdaterGpu->activateLogging( "Stats"      );
 	pUpdaterGpu->activateLogging( "Info"      );

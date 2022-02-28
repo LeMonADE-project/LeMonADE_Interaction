@@ -1,11 +1,11 @@
 ADD_EXECUTABLE(generate_blockcopolymers generate_blockcopolymers.cpp)
 TARGET_LINK_LIBRARIES(generate_blockcopolymers LeMonADE CommandlineParser )
-# CommandlineParser
-# # cpu based interaction simulator 
-# ADD_EXECUTABLE(simulate_interaction simulate_interaction.cpp)
-# TARGET_LINK_LIBRARIES(simulate_interaction LeMonADE )
 
+# cpu based interaction simulator 
+ADD_EXECUTABLE(simulate_interaction simulate_interaction.cpp)
+TARGET_LINK_LIBRARIES(simulate_interaction LeMonADE CommandlineParser )
 
+# gpu based interaction simulator 
 cuda_add_executable( simulate_interactionGPU simulate_interactionGPU.cpp )
 
 if( ( NOT DEFINED project_build_static ) OR ( project_build_static ) )

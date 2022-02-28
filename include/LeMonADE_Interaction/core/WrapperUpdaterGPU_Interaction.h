@@ -159,6 +159,7 @@ public:
 
         mLog( "Info" ) << "[" << __FILENAME__ << "::initialize] Forwarding relevant paramters to GPU updater\n";
         mUpdaterGpu.setGpu( miGpuToUse );
+        mLog( "Info" ) << "[" << __FILENAME__ << "::initialize] Set the number of steps between sorting\n";
         if ( mSetStepsBetweenSortings )
             mUpdaterGpu.setStepsBetweenSortings( mnStepsBetweenSortings );
 
@@ -191,7 +192,7 @@ public:
         mLog( "Info" ) << "[" << __FILENAME__ << "::initialize] mUpdaterGpu.setNNInteraction\n";
         std::map<uint32_t,bool> nnTags;
         for ( size_t i = 0u; i < mIngredients.getMolecules().size(); ++i )
-            nnTags.at( static_cast<uint32_t>(mIngredients.getMolecules()[i].getInteractionTag()) )=true;
+            nnTags[ static_cast<uint32_t>(mIngredients.getMolecules()[i].getInteractionTag()) ]=true;
         for ( auto it =nnTags.begin(); it != nnTags.end(); it++ )
             for ( auto it2 =nnTags.begin(); it2 != nnTags.end(); it2++ )
                 mUpdaterGpu.setNNInteraction(it->first,it2->first,mIngredients.getNNInteraction(it->first,it2->first));
@@ -265,20 +266,6 @@ public:
                 mUpdaterGpu.getMonomerPositionInZ(i)
             );
         }
-        // // copy back connectivity for all monomers 
-        // mLog( "Info" ) << "[" << __FILENAME__ << "] copy back monomer connectivity from GPU updater to CPU 'molecules' to be used with analyzers\n";
-        // for( size_t i = 0; i < mIngredients.getMolecules().size(); ++i ){
-        //     if (mIngredients.getMolecules()[i].isReactive()){
-        //         auto nLinks(mUpdaterGpu.getNumLinks(i));
-        //         for ( size_t iBond = 0; iBond < nLinks; ++iBond ){
-        //             auto Neighbor(mUpdaterGpu.getNeighborIdx(i,iBond));
-        //             if (! molecules.areConnected(i,Neighbor))
-        //                 molecules.connect(i,Neighbor);
-        //         }
-        //     } 
-        // }
-	
-	
         /* update number of total simulation steps already done */
         mIngredients.modifyMolecules().setAge( mIngredients.modifyMolecules().getAge() + mnSteps );
 

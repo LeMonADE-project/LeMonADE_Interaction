@@ -94,14 +94,19 @@ protected:
     using BaseClass::diagMovesOn;
     using BaseClass::boxCheck;
     using BaseClass::checkSystem;
+    using BaseClass::setAttributeTag;
+    using BaseClass::getAttributeTag;
+    using BaseClass::mnMonomersPadded;
+    using BaseClass::mPolymerFlags;
+    using BaseClass::miGpuToUse;
 
-    //! Interaction energies between monomer types. Max. type=255 given by max(uint8_t)=255
-    double interactionTable[256][256];
+    static auto constexpr maxInteractionType = 32u;
+    //! Interaction energies between monomer types. Max. type=maxInteractionType given by max(uint8_t)=maxInteractionType
+    double interactionTable[maxInteractionType][maxInteractionType];
 
     //! Lookup table for exp(-interactionTable[a][b])
-    double probabilityLookup[256][256];
+    double probabilityLookup[maxInteractionType][maxInteractionType];
 
-    
 public:
     UpdaterGPU_Interaction();
     ~UpdaterGPU_Interaction();
@@ -137,10 +142,10 @@ public:
     //get the nearest neighbor interaction for the gpu 
     double getNNInteraction(int32_t typeA, int32_t typeB) const; 
 
-    void launch_CheckConnection(
+    void launch_CheckSpeciesInteraction(
 	  const size_t nBlocks, const size_t nThreads, 
       const size_t iSpecies, const uint64_t seed);
-    void launch_ApplyConnection(
+    void launch_ApplyInteraction(
 	  const size_t nBlocks , const size_t   nThreads, 
 	  const size_t iSpecies);
 
