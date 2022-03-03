@@ -221,8 +221,9 @@ public:
 	
 	    mLog( "Info" ) << "[" << __FILENAME__ << "::initialize] set the methods from LeMonADE to GPU-class for BFM\n";
         Method met;
-        met.modifyCurve().setMode(0);
+        
         met.modifyCurve().setBox(mIngredients.getBoxX(),mIngredients.getBoxY(),mIngredients.getBoxZ());
+        met.modifyCurve().setMode(0);
         met.modifyPacking().setBitPackingOn(true);
         met.modifyPacking().setNBufferedTmpLatticeOn(true);
         met.setOnGPUForOverhead(true);

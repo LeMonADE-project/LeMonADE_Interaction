@@ -64,6 +64,31 @@ __global__ void  kernelPrintTagType(){
     // auto T_Id id = blockIdx.x * blockDim.x + threadIdx.x;
     printf("TagType[%d][%d]=%f\n",blockIdx.x,  threadIdx.x, dcNNProbability[blockIdx.x][threadIdx.x] );
 }
+/**
+ * @brief convinience function to print the box dimensions for the device constants 
+ */
+ __global__ void CheckBoxDimensions()
+ {
+ printf("KernelCheckBoxDimensions: %d %d %d %d %d %d  %d %d \n",dcBoxX, dcBoxY, dcBoxZ,dcBoxXM1, dcBoxYM1,dcBoxZM1, dcBoxXLog2, dcBoxXYLog2 );
+ }
+ __global__ void checkCurve(
+     Method const met
+ ){
+    uint32_t id = blockIdx.x * blockDim.x + threadIdx.x;
+    uint32_t x(met.getCurve().linearizeBoxVectorIndexX(id));
+    uint32_t y(met.getCurve().linearizeBoxVectorIndexY(id));
+    uint32_t z(met.getCurve().linearizeBoxVectorIndexZ(id));
+
+    uint32_t xM2(met.getCurve().linearizeBoxVectorIndexX(id+(0u-2u)));
+    uint32_t yM2(met.getCurve().linearizeBoxVectorIndexY(id+(0u-2u)));
+    uint32_t zM2(met.getCurve().linearizeBoxVectorIndexZ(id+(0u-2u)));
+
+    uint32_t xP2(met.getCurve().linearizeBoxVectorIndexX(id+2u));
+    uint32_t yP2(met.getCurve().linearizeBoxVectorIndexY(id+2u));
+    uint32_t zP2(met.getCurve().linearizeBoxVectorIndexZ(id+2u));
+
+    printf("%d (%d %d %d) (%d %d %d) (%d %d %d) %d \n", id, x,y,z,xM2,yM2,zM2,xP2,yP2,zP2,( (-2) & dcBoxXM1 )  );
+}
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 ///////Defintion of member functions for the interaction lattice //////////////
@@ -101,17 +126,42 @@ __global__ void kernelUpdateInteractionLattice
 ){
     for ( T_Id id = blockIdx.x * blockDim.x + threadIdx.x;
           id < nMonomers; id += gridDim.x * blockDim.x ){
-        auto const r0 = dpPolymerSystem[ iOffset + id ];
-        auto const interactionTag= dInteractionTag[iOffset + id]+1 ;
-        auto const x0Abs  = met.getCurve().linearizeBoxVectorIndexX( r0.x               );
-        auto const x0POne = met.getCurve().linearizeBoxVectorIndexX( r0.x + T_UCoordinateCuda(1) );
-    
-        auto const y0Abs  = met.getCurve().linearizeBoxVectorIndexY( r0.y                );
-        auto const y0POne = met.getCurve().linearizeBoxVectorIndexY( r0.y  + T_UCoordinateCuda(1) );
-    
-        auto const z0Abs  = met.getCurve().linearizeBoxVectorIndexZ( r0.z                );
-        auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( r0.z  + T_UCoordinateCuda(1) );
         
+        auto const r0 = dpPolymerSystem[ iOffset + id ];
+        T_InteractionTag const interactionTag( dInteractionTag[iOffset + id] + T_InteractionTag(1) );
+        uint32_t x=r0.x;
+        uint32_t y=r0.y;
+        uint32_t z=r0.z;
+
+        auto const x0Abs  = met.getCurve().linearizeBoxVectorIndexX( x               );
+        auto const x0POne = met.getCurve().linearizeBoxVectorIndexX( x + uint32_t(1) );
+    
+        auto const y0Abs  = met.getCurve().linearizeBoxVectorIndexY( y                );
+        auto const y0POne = met.getCurve().linearizeBoxVectorIndexY( y  + uint32_t(1) );
+    
+        auto const z0Abs  = met.getCurve().linearizeBoxVectorIndexZ( z                );
+        auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( z  + uint32_t(1) );
+        
+        if (
+            dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] != T_InteractionTag(0) ||
+            dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] != T_InteractionTag(0) ||
+            dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] != T_InteractionTag(0) ||
+            dpInteractionLattice[ x0Abs  + y0POne + z0POne ] != T_InteractionTag(0) ||
+            dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] != T_InteractionTag(0) ||
+            dpInteractionLattice[ x0POne + y0POne + z0Abs  ] != T_InteractionTag(0) ||
+            dpInteractionLattice[ x0POne + y0Abs  + z0POne ] != T_InteractionTag(0) ||
+            dpInteractionLattice[ x0POne + y0POne + z0POne ] != T_InteractionTag(0) 
+        ) {
+            printf("Occupy an already occupied lattice site: %d %d %d %d %d %d %d %d\n",   
+            dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] ,
+            dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] ,
+            dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] ,
+            dpInteractionLattice[ x0Abs  + y0POne + z0POne ] ,
+            dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] ,
+            dpInteractionLattice[ x0POne + y0POne + z0Abs  ] ,
+            dpInteractionLattice[ x0POne + y0Abs  + z0POne ] ,
+            dpInteractionLattice[ x0POne + y0POne + z0POne ] );
+        }
         dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] = interactionTag;
         dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = interactionTag;
         dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = interactionTag;
@@ -129,7 +179,7 @@ __global__ void kernelUpdateInteractionLattice
 template< typename T_UCoordinateCuda >
 void UpdaterGPU_Interaction< T_UCoordinateCuda >::launch_initializeInteractionLattice(
   const size_t nBlocks , const size_t nThreads, const T_Id iSpecies ){
-	mLog ( "Check" ) <<"Start filling lattice with ones:  \n" ;
+	// mLog ( "Check" ) <<"Start filling lattice with ones:  \n" ;
 	if ( false ){ //fill in cpu 
 		mPolymerSystemSorted->pop();
 		for (T_Id i =0; i < mnElementsInGroup[ iSpecies ]; i++){
@@ -165,18 +215,24 @@ __global__ void kernelResetInteractionLattice
     T_Id                        const              nMonomers        ,
     Method                      const              met 
 ){
-    for ( T_Id idB = blockIdx.x * blockDim.x + threadIdx.x;
-          idB < nMonomers; idB += gridDim.x * blockDim.x ){
-        auto const r0 = dpPolymerSystem[ iOffset + idB ];
-        auto const x0Abs  = met.getCurve().linearizeBoxVectorIndexX( r0.x               );
-        auto const x0POne = met.getCurve().linearizeBoxVectorIndexX( r0.x + T_UCoordinateCuda(1) );
-    
-        auto const y0Abs  = met.getCurve().linearizeBoxVectorIndexY( r0.y                );
-        auto const y0POne = met.getCurve().linearizeBoxVectorIndexY( r0.y  + T_UCoordinateCuda(1) );
-    
-        auto const z0Abs  = met.getCurve().linearizeBoxVectorIndexZ( r0.z                );
-        auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( r0.z  + T_UCoordinateCuda(1) );
+    for ( T_Id id = blockIdx.x * blockDim.x + threadIdx.x;
+        id < nMonomers; id += gridDim.x * blockDim.x ){
+        
+        auto const r0 = dpPolymerSystem[ iOffset + id ];
         T_InteractionTag const interactionTag(0);
+        uint32_t x=r0.x;
+        uint32_t y=r0.y;
+        uint32_t z=r0.z;
+
+        auto const x0Abs  = met.getCurve().linearizeBoxVectorIndexX( x               );
+        auto const x0POne = met.getCurve().linearizeBoxVectorIndexX( x + uint32_t(1) );
+    
+        auto const y0Abs  = met.getCurve().linearizeBoxVectorIndexY( y                );
+        auto const y0POne = met.getCurve().linearizeBoxVectorIndexY( y  + uint32_t(1) );
+    
+        auto const z0Abs  = met.getCurve().linearizeBoxVectorIndexZ( z                );
+        auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( z  + uint32_t(1) );
+
         dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] = interactionTag;
         dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = interactionTag;
         dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = interactionTag;
@@ -217,6 +273,9 @@ template< typename T_UCoordinateCuda  >
 void UpdaterGPU_Interaction< T_UCoordinateCuda >::checkInteractionLatticeOccupation()  
 {
 	mLatticeInteractionTag->pop(0);
+    mPolymerSystemSorted->pop(0);
+    miToiNew->pop(0);
+    cudaStreamSynchronize( mStream );
 	uint32_t countLatticeEntries(0);
 	for(T_Id x=0; x< mBoxX; x++ )
 		for(T_Id y=0; y< mBoxY; y++ )
@@ -229,22 +288,38 @@ void UpdaterGPU_Interaction< T_UCoordinateCuda >::checkInteractionLatticeOccupat
 		<< "mnAllMonomers       = " <<       mnAllMonomers << "\n"
 		<< "countLatticeEntries = " << countLatticeEntries << "\n";
     //TODO:teseting the consistency of the lattice and the specied position
-	// mPolymerSystemSorted->pop();
-	// for(T_Id x=0; x< mBoxX; x++ )
-	// 	for(T_Id y=0; y< mBoxY; y++ )
-	// 		for(T_Id z=0; z< mBoxX; z++ ){
-	// 			T_InteractionTag LatticeEntry(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x,y,z)]);
-	// 			if( LatticeEntry > 0 ){
-	// 				auto r=mPolymerSystemSorted->host[LatticeEntry-1 + mviSubGroupOffsets[1] ];
-	// 				if ( r.x %512  != x || r.y %512 != y || r.z %512!= z  ){
-	// 					std::stringstream error_message;
-	// 					error_message << "LatticeEntry=  "<<LatticeEntry  << " "
-	// 						<< "Pos= ("<< x <<"," << y << "," << z << ")" << " "
-	// 						<< "mPolymerSystemSorted= ("<< r.x <<"," << r.y << "," << r.z << ")" << "\n";
-	// 					throw std::runtime_error(error_message.str());
-	// 				}
-	// 			}
-	// 		}
+	
+    for (auto i=0; i < mnAllMonomers; i++){
+        auto const r0(mPolymerSystemSorted->host[miToiNew->host[i]]);
+        uint32_t x=r0.x;
+        uint32_t y=r0.y;
+        uint32_t z=r0.z;
+        if (
+            !(
+            (getAttributeTag(i)+1)== static_cast<uint32_t>(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x  ,y  ,z  )]) &&
+            (getAttributeTag(i)+1)== static_cast<uint32_t>(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x  ,y+1,z  )]) &&
+            (getAttributeTag(i)+1)== static_cast<uint32_t>(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x  ,y  ,z+1)]) &&
+            (getAttributeTag(i)+1)== static_cast<uint32_t>(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x  ,y+1,z+1)]) &&
+            (getAttributeTag(i)+1)== static_cast<uint32_t>(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x+1,y  ,z  )]) &&
+            (getAttributeTag(i)+1)== static_cast<uint32_t>(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x+1,y+1,z  )]) &&
+            (getAttributeTag(i)+1)== static_cast<uint32_t>(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x+1,y  ,z+1)]) &&
+            (getAttributeTag(i)+1)== static_cast<uint32_t>(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x+1,y+1,z+1)]) 
+            )
+        ){
+            std::stringstream error_message;
+            error_message << "AttributeTag["<<i<<"]="<<getAttributeTag(i)+1<<"\n";
+            error_message << "LatticeEntry["<<x  <<","<<y  <<","<<z  <<"]="<< static_cast<uint32_t>(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x  ,y  ,z  )])<< "\n"; 
+            error_message << "LatticeEntry["<<x  <<","<<y+1<<","<<z  <<"]="<< static_cast<uint32_t>(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x  ,y+1,z  )])<< "\n"; 
+            error_message << "LatticeEntry["<<x  <<","<<y  <<","<<z+1<<"]="<< static_cast<uint32_t>(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x  ,y  ,z+1)])<< "\n"; 
+            error_message << "LatticeEntry["<<x  <<","<<y+1<<","<<z+1<<"]="<< static_cast<uint32_t>(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x  ,y+1,z+1)])<< "\n"; 
+            error_message << "LatticeEntry["<<x+1<<","<<y  <<","<<z  <<"]="<< static_cast<uint32_t>(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x+1,y  ,z  )])<< "\n"; 
+            error_message << "LatticeEntry["<<x+1<<","<<y+1<<","<<z  <<"]="<< static_cast<uint32_t>(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x+1,y+1,z  )])<< "\n"; 
+            error_message << "LatticeEntry["<<x+1<<","<<y  <<","<<z+1<<"]="<< static_cast<uint32_t>(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x+1,y  ,z+1)])<< "\n"; 
+            error_message << "LatticeEntry["<<x+1<<","<<y+1<<","<<z+1<<"]="<< static_cast<uint32_t>(mLatticeInteractionTag->host[met.getCurve().linearizeBoxVectorIndex(x+1,y+1,z+1)])<< "\n"; 
+            throw std::runtime_error(error_message.str());
+        }
+
+    }
 }
 ///////////////////////////////////////////////////////////////////////////////
 //Lattice handling is done ////////////////////////////////////////////////////
@@ -318,7 +393,6 @@ __device__ inline double calcInteractionProbability(
             prop/=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ]);
             prop/=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0POne + z0POne ]);
         
-            // prop*=(dx==0)? (-1) : 1;
             if(dx==0){prop=1./prop;}
             break;
         case 1 : //+-y
@@ -350,7 +424,6 @@ __device__ inline double calcInteractionProbability(
             prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ]);
             prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0POne ]);
                 
-            // prop*=(dy==0)? (-1) : 1;      
             if(dy==0){prop=1./prop;}                        
             break;
         case 2 : //+-z
@@ -382,15 +455,12 @@ __device__ inline double calcInteractionProbability(
             prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0POne + z0PTwo ]);
             prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0POne + z0PTwo ]);
         
-            // prop*=(dz==0)? (-1) : 1;
             if(dz==0){prop=1./prop;}
             break;
         //TODO : Add diagonal moves 
     }
     return prop;
 }
-
-
 /**
  * @brief add interaction to the species movements
  * 
@@ -417,23 +487,25 @@ __device__ inline double calcInteractionProbability(
      uint64_t            const              rGlobalIteration        ,
      Method              const              met
  ){
-     for ( auto iMonomer = blockIdx.x * blockDim.x + threadIdx.x;
-           iMonomer < nMonomers; iMonomer += gridDim.x * blockDim.x ){
-        auto const properties = dpPolymerFlags[ iMonomer ];
+    for ( T_Id id = blockIdx.x * blockDim.x + threadIdx.x;
+        id < nMonomers; id += gridDim.x * blockDim.x ){
+        auto const properties = dpPolymerFlags[ id ];
         if ( ( properties & T_Flags(32) ) == T_Flags(0) ) // impossible move
             continue;
 
-        Saru rng(rGlobalIteration,iMonomer+iOffset,rSeed);
-        auto const r0 = dpPolymerSystem[ iMonomer ];
         auto direction = properties & T_Flags(31); // 7=0b111 31=0b11111
+        auto const r0 = dpPolymerSystem[ id ];
         auto const intProp(calcInteractionProbability( dpInteractionLattice, r0.x, r0.y, r0.z, direction, met ));
-        // printf("intProp %d %.15f\n",iMonomer, intProp);
-        if ( ! ( rng.rng_d() < intProp  ) ) {
+        // printf("intProp %d %.15f\n",id, intProp);
+        // if ( ! ( rng.rng_d() < intProp  ) ) {
+        Saru rng(rGlobalIteration,id+iOffset,rSeed);
+        if ( rng.rng_d() < intProp ) {
              /* move is not allowed due to the interaction  */
-            direction &= T_Flags(32) /* cannot -move-modification */;
-            dpPolymerFlags[ iMonomer ] = direction;
+            // direction ^= T_Flags(32) /* cannot -move-modification */;
+            // dpPolymerFlags[ id ] = direction;
+            direction += T_Flags(32);
         }
-        
+        dpPolymerFlags[ id ] = direction;
      }
  }
 
@@ -465,98 +537,385 @@ T_Flags           * const              dpPolymerFlags          ,
 T_Id                const              nMonomers               ,
 Method              const              met
 ){
-    for ( auto iMonomer = blockIdx.x * blockDim.x + threadIdx.x;
-        iMonomer < nMonomers; iMonomer += gridDim.x * blockDim.x ){
-        auto const properties = dpPolymerFlags[ iMonomer ];
-        if ( ! ( properties & T_Flags(32) ) ) // check if can-move flag is set
+    for ( T_Id id = blockIdx.x * blockDim.x + threadIdx.x;
+        id < nMonomers; id += gridDim.x * blockDim.x ){
+        auto const properties = dpPolymerFlags[ id ];
+        if ( ( properties & T_Flags(32) ) == T_Flags(0) ) // impossible move
+        // if ( ! ( properties & T_Flags(32) ) ) // impossible move
             continue; 
         auto const direction = properties & T_Flags(31); // 7=0b111 31=0b11111
-        auto const r0 = dpPolymerSystem[ iMonomer ];
+        /** The positions are already updated!
+         * Therfore, we substract the direction to obtain the old position,
+         * which were assumed in the switch-statement. 
+         * Problem : The DXTable_d is not set within this file scope!!!
+         * Solution: Rewrite the adressing of the lattice...
+         */
+        auto const r0 = dpPolymerSystem[ id ] ;
+        // typename CudaVec4< T_UCoordinateCuda >::value_type const r0 = {
+        //     T_UCoordinateCuda( r1.x - DXTable_d[ direction ] ),
+        //     T_UCoordinateCuda( r1.y - DYTable_d[ direction ] ),
+        //     T_UCoordinateCuda( r1.z - DZTable_d[ direction ] ),
+        //     T_UCoordinateCuda( 0 )
+        // };
     
-        auto const x0MOne = met.getCurve().linearizeBoxVectorIndexX( r0.x - T_UCoordinateCuda(1) );
-        auto const x0Abs  = met.getCurve().linearizeBoxVectorIndexX( r0.x                        );
-        auto const x0POne = met.getCurve().linearizeBoxVectorIndexX( r0.x + T_UCoordinateCuda(1) );
-        auto const x0PTwo = met.getCurve().linearizeBoxVectorIndexX( r0.x + T_UCoordinateCuda(2) );
+        auto const x0MOne = met.getCurve().linearizeBoxVectorIndexX( uint32_t(r0.x) - uint32_t(1) );
+        auto const x0Abs  = met.getCurve().linearizeBoxVectorIndexX( uint32_t(r0.x)               );
+        auto const x0POne = met.getCurve().linearizeBoxVectorIndexX( uint32_t(r0.x) + uint32_t(1) );
+        auto const x0PTwo = met.getCurve().linearizeBoxVectorIndexX( uint32_t(r0.x) + uint32_t(2) );
     
-        auto const y0MOne = met.getCurve().linearizeBoxVectorIndexY( r0.y - T_UCoordinateCuda(1) );
-        auto const y0Abs  = met.getCurve().linearizeBoxVectorIndexY( r0.y                        );
-        auto const y0POne = met.getCurve().linearizeBoxVectorIndexY( r0.y + T_UCoordinateCuda(1) );
-        auto const y0PTwo = met.getCurve().linearizeBoxVectorIndexY( r0.y + T_UCoordinateCuda(2) );
+        auto const y0MOne = met.getCurve().linearizeBoxVectorIndexY( uint32_t(r0.y) - uint32_t(1) );
+        auto const y0Abs  = met.getCurve().linearizeBoxVectorIndexY( uint32_t(r0.y)               );
+        auto const y0POne = met.getCurve().linearizeBoxVectorIndexY( uint32_t(r0.y) + uint32_t(1) );
+        auto const y0PTwo = met.getCurve().linearizeBoxVectorIndexY( uint32_t(r0.y) + uint32_t(2) );
     
-        auto const z0MOne = met.getCurve().linearizeBoxVectorIndexZ( r0.z - T_UCoordinateCuda(1) );
-        auto const z0Abs  = met.getCurve().linearizeBoxVectorIndexZ( r0.z                        );
-        auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( r0.z + T_UCoordinateCuda(1) );
-        auto const z0PTwo = met.getCurve().linearizeBoxVectorIndexZ( r0.z + T_UCoordinateCuda(2) );
+        auto const z0MOne = met.getCurve().linearizeBoxVectorIndexZ( uint32_t(r0.z) - uint32_t(1) );
+        auto const z0Abs  = met.getCurve().linearizeBoxVectorIndexZ( uint32_t(r0.z)               );
+        auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( uint32_t(r0.z) + uint32_t(1) );
+        auto const z0PTwo = met.getCurve().linearizeBoxVectorIndexZ( uint32_t(r0.z) + uint32_t(2) );
 
-        auto nnTag1(dpInteractionLattice[ x0Abs  ,y0Abs  , z0Abs  ]);
-        auto nnTag2(T_InteractionTag(0));
-        
+        T_InteractionTag nnTag2(T_InteractionTag(0));
         switch(direction){ 
-            case 0: //-x
-                dpInteractionLattice[ x0MOne + y0Abs  + z0Abs  ] = nnTag1;
-                dpInteractionLattice[ x0MOne + y0POne + z0Abs  ] = nnTag1;
-                dpInteractionLattice[ x0MOne + y0Abs  + z0POne ] = nnTag1;
-                dpInteractionLattice[ x0MOne + y0POne + z0POne ] = nnTag1;
+            case 0:{ //-x
+                // dpInteractionLattice[ x0MOne + y0Abs  + z0Abs  ] = nnTag1;
+                // dpInteractionLattice[ x0MOne + y0POne + z0Abs  ] = nnTag1;
+                // dpInteractionLattice[ x0MOne + y0Abs  + z0POne ] = nnTag1;
+                // dpInteractionLattice[ x0MOne + y0POne + z0POne ] = nnTag1;
                 
-                dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0POne + z0POne ] = nnTag2;
+                // dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = nnTag2;
+                // dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag2;
+                // dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag2;
+                // dpInteractionLattice[ x0POne + y0POne + z0POne ] = nnTag2;
+
+                T_InteractionTag nnTag1(dpInteractionLattice[ x0PTwo + y0Abs + z0Abs  ]);
+                // printf("-x1 %d %d %d (%d %d %d %d) (%d %d %d %d)  %f %f \n", static_cast<uint32_t>(nnTag1), static_cast<uint32_t>(nnTag2), id, dpInteractionLattice[ x0Abs + y0Abs  + z0Abs  ], dpInteractionLattice[ x0Abs + y0POne + z0Abs  ], dpInteractionLattice[ x0Abs + y0Abs  + z0POne ], dpInteractionLattice[ x0Abs + y0POne + z0POne ], dpInteractionLattice[ x0PTwo + y0Abs  + z0Abs  ], dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ], dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ], dpInteractionLattice[ x0PTwo + y0POne + z0POne ], met.getCurve().linearizeBoxVectorIndexX( uint32_t(254) + uint32_t(2) ), met.getCurve().linearizeBoxVectorIndexX( - uint32_t(1) ));
+                // printf("-x1 %d %d %d (%d %d %d %d)\n", static_cast<uint32_t>(nnTag1), static_cast<uint32_t>(nnTag2), id, x0MOne,x0Abs,x0POne,x0PTwo);
+                if ( 
+                    dpInteractionLattice[ x0Abs + y0Abs  + z0Abs  ] != nnTag2 || 
+                    dpInteractionLattice[ x0Abs + y0POne + z0Abs  ] != nnTag2 || 
+                    dpInteractionLattice[ x0Abs + y0Abs  + z0POne ] != nnTag2 || 
+                    dpInteractionLattice[ x0Abs + y0POne + z0POne ] != nnTag2  
+                ){
+                    printf("Wrong occupation in -x t1: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs + y0Abs  + z0Abs  ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs + y0POne + z0Abs  ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs + y0Abs  + z0POne ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs + y0POne + z0POne ]),
+                        uint32_t(r0.x), uint32_t(r0.y)  , uint32_t(r0.z)   ,
+                        uint32_t(r0.x), uint32_t(r0.y)+1, uint32_t(r0.z)   ,
+                        uint32_t(r0.x), uint32_t(r0.y)  , uint32_t(r0.z)+1 ,
+                        uint32_t(r0.x), uint32_t(r0.y)+1, uint32_t(r0.z)+1 ,id
+                    );
+                }
+                if ( 
+                    dpInteractionLattice[ x0PTwo + y0Abs  + z0Abs  ] != nnTag1 || 
+                    dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ] != nnTag1 || 
+                    dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ] != nnTag1 || 
+                    dpInteractionLattice[ x0PTwo + y0POne + z0POne ] != nnTag1  
+                ){
+                    printf("Wrong occupation in -x t2: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
+                        static_cast<uint32_t>(dpInteractionLattice[x0PTwo + y0Abs  + z0Abs  ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0PTwo + y0POne + z0Abs   ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0PTwo + y0Abs  + z0POne  ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0PTwo + y0POne + z0POne]),
+                        uint32_t(r0.x)+2, uint32_t(r0.y)  , uint32_t(r0.z)   ,
+                        uint32_t(r0.x)+2, uint32_t(r0.y)+1, uint32_t(r0.z)   ,
+                        uint32_t(r0.x)+2, uint32_t(r0.y)  , uint32_t(r0.z)+1 ,
+                        uint32_t(r0.x)+2, uint32_t(r0.y)+1, uint32_t(r0.z)+1 ,id
+                    );
+                }
+                dpInteractionLattice[ x0Abs + y0Abs  + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0Abs + y0POne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0Abs + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0Abs + y0POne + z0POne ] = nnTag1;
+                
+                dpInteractionLattice[ x0PTwo + y0Abs  + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0PTwo + y0POne + z0POne ] = nnTag2;
+                // printf("-x2 %d %d %d (%d %d %d %d) (%d %d %d %d) \n", static_cast<uint32_t>(nnTag1), static_cast<uint32_t>(nnTag2), id, dpInteractionLattice[ x0Abs + y0Abs  + z0Abs  ], dpInteractionLattice[ x0Abs + y0POne + z0Abs  ], dpInteractionLattice[ x0Abs + y0Abs  + z0POne ], dpInteractionLattice[ x0Abs + y0POne + z0POne ], dpInteractionLattice[ x0PTwo + y0Abs  + z0Abs  ], dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ], dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ], dpInteractionLattice[ x0PTwo + y0POne + z0POne ]);
+                }
                 break;
-            case 1: //+x
-                dpInteractionLattice[ x0PTwo + y0Abs  + z0Abs  ] = nnTag1;
+            case 1:{ //+x
+                // dpInteractionLattice[ x0PTwo + y0Abs  + z0Abs  ] = nnTag1;
+                // dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ] = nnTag1;
+                // dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ] = nnTag1;
+                // dpInteractionLattice[ x0PTwo + y0POne + z0POne ] = nnTag1;
+
+                // dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] = nnTag2;
+                // dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = nnTag2;
+                // dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = nnTag2;
+                // dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag2;
+                T_InteractionTag nnTag1(dpInteractionLattice[ x0MOne + y0Abs + z0Abs  ]);
+                
+                if ( 
+                    dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] != nnTag2 || 
+                    dpInteractionLattice[ x0POne + y0POne + z0Abs  ] != nnTag2 || 
+                    dpInteractionLattice[ x0POne + y0Abs  + z0POne ] != nnTag2 || 
+                    dpInteractionLattice[ x0POne + y0POne + z0POne ] != nnTag2  
+                ){
+                    printf("Wrong occupation in +x t1: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0POne + z0Abs  ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0Abs  + z0POne ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0POne + z0POne ]),
+                        uint32_t(r0.x)+1, uint32_t(r0.y)  , uint32_t(r0.z)   ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)+1, uint32_t(r0.z)   ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)  , uint32_t(r0.z)+1 ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)+1, uint32_t(r0.z)+1 ,id
+                    );
+                }
+                if ( 
+                    dpInteractionLattice[ x0MOne + y0Abs  + z0Abs  ] != nnTag1 || 
+                    dpInteractionLattice[ x0MOne + y0POne + z0Abs  ] != nnTag1 || 
+                    dpInteractionLattice[ x0MOne + y0Abs  + z0POne ] != nnTag1 || 
+                    dpInteractionLattice[ x0MOne + y0POne + z0POne ] != nnTag1  
+                ){
+                    printf("Wrong occupation in +x t2: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
+                        static_cast<uint32_t>(dpInteractionLattice[ x0MOne + y0Abs  + z0Abs  ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0MOne + y0POne + z0Abs   ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0MOne + y0Abs  + z0POne  ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0MOne + y0POne + z0POne]),
+                        uint32_t(r0.x)-1, uint32_t(r0.y)  , uint32_t(r0.z)   ,
+                        uint32_t(r0.x)-1, uint32_t(r0.y)+1, uint32_t(r0.z)   ,
+                        uint32_t(r0.x)-1, uint32_t(r0.y)  , uint32_t(r0.z)+1 ,
+                        uint32_t(r0.x)-1, uint32_t(r0.y)+1, uint32_t(r0.z)+1 ,id
+                    );
+                }
+                dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0POne + z0POne ] = nnTag1;
+
+                dpInteractionLattice[ x0MOne  + y0Abs  + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0MOne  + y0POne + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0MOne  + y0Abs  + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0MOne  + y0POne + z0POne ] = nnTag2;
+                }
+                break;
+            case 2:{ //-y
+                // dpInteractionLattice[ x0Abs  + y0MOne + z0Abs  ] = nnTag1;
+                // dpInteractionLattice[ x0POne + y0MOne + z0Abs  ] = nnTag1;
+                // dpInteractionLattice[ x0Abs  + y0MOne + z0POne ] = nnTag1;
+                // dpInteractionLattice[ x0POne + y0MOne + z0POne ] = nnTag1;
+                
+                // dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = nnTag2;
+                // dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag2;
+                // dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag2;
+                // dpInteractionLattice[ x0POne + y0POne + z0POne ] = nnTag2;
+                T_InteractionTag nnTag1(dpInteractionLattice[ x0Abs + y0PTwo + z0Abs  ]);
+                if ( 
+                    dpInteractionLattice[ x0Abs  + y0Abs + z0Abs  ] != nnTag2 || 
+                    dpInteractionLattice[ x0POne + y0Abs + z0Abs  ] != nnTag2 || 
+                    dpInteractionLattice[ x0Abs  + y0Abs + z0POne ] != nnTag2 || 
+                    dpInteractionLattice[ x0POne + y0Abs + z0POne ] != nnTag2  
+                ){
+                    printf("Wrong occupation in -y t1: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0Abs + z0Abs  ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0Abs + z0Abs  ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0Abs + z0POne ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0Abs + z0POne ]),
+                        uint32_t(r0.x)  , uint32_t(r0.y)  , uint32_t(r0.z)   ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)  , uint32_t(r0.z)   ,
+                        uint32_t(r0.x)  , uint32_t(r0.y)  , uint32_t(r0.z)+1 ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)  , uint32_t(r0.z)+1 ,id
+                    );
+                }
+                if ( 
+                    dpInteractionLattice[ x0Abs  + y0PTwo + z0Abs  ] != nnTag1 || 
+                    dpInteractionLattice[ x0POne + y0PTwo + z0Abs  ] != nnTag1 || 
+                    dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ] != nnTag1 || 
+                    dpInteractionLattice[ x0POne + y0PTwo + z0POne ] != nnTag1  
+                ){
+                    printf("Wrong occupation in -y t2: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0PTwo + z0Abs  ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0PTwo + z0Abs  ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0PTwo + z0POne ]),
+                        uint32_t(r0.x)  , uint32_t(r0.y)+2, uint32_t(r0.z)   ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)+2, uint32_t(r0.z)   ,
+                        uint32_t(r0.x)  , uint32_t(r0.y)+2, uint32_t(r0.z)+1 ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)+2, uint32_t(r0.z)+1 ,id
+                    );
+                } 
+
+                dpInteractionLattice[ x0Abs  + y0Abs + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0Abs + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs + z0POne ] = nnTag1;
+                
+                dpInteractionLattice[ x0Abs  + y0PTwo + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0PTwo + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0PTwo + z0POne ] = nnTag2;
+                }
+                break;
+            case 3:{ //+y
+                // dpInteractionLattice[ x0Abs  + y0PTwo + z0Abs  ] = nnTag1;
+                // dpInteractionLattice[ x0PTwo + y0PTwo + z0Abs  ] = nnTag1;
+                // dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ] = nnTag1;
+                // dpInteractionLattice[ x0PTwo + y0PTwo + z0POne ] = nnTag1;
+
+                // dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] = nnTag2;
+                // dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = nnTag2;
+                // dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = nnTag2;
+                // dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag2;
+                T_InteractionTag nnTag1(dpInteractionLattice[ x0Abs + y0MOne + z0Abs  ]);
+                if ( 
+                    dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] != nnTag2 || 
+                    dpInteractionLattice[ x0POne + y0POne + z0Abs  ] != nnTag2 || 
+                    dpInteractionLattice[ x0Abs  + y0POne + z0POne ] != nnTag2 || 
+                    dpInteractionLattice[ x0POne + y0POne + z0POne ] != nnTag2  
+                ){
+                    printf("Wrong occupation in +y t1: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0POne + z0Abs  ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0POne + z0POne ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0POne + z0POne ]),
+                        uint32_t(r0.x)  , uint32_t(r0.y)+1, uint32_t(r0.z)   ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)+1, uint32_t(r0.z)   ,
+                        uint32_t(r0.x)  , uint32_t(r0.y)+1, uint32_t(r0.z)+1 ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)+1, uint32_t(r0.z)+1 ,id
+                    );
+                }
+                if ( 
+                    dpInteractionLattice[ x0Abs  + y0MOne + z0Abs  ] != nnTag1 || 
+                    dpInteractionLattice[ x0POne + y0MOne + z0Abs  ] != nnTag1 || 
+                    dpInteractionLattice[ x0Abs  + y0MOne + z0POne ] != nnTag1 || 
+                    dpInteractionLattice[ x0POne + y0MOne + z0POne ] != nnTag1  
+                ){
+                    printf("Wrong occupation in +y t2: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0MOne + z0Abs  ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0MOne + z0Abs  ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0MOne + z0POne ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0MOne + z0POne ]),
+                        uint32_t(r0.x)  , uint32_t(r0.y)-1, uint32_t(r0.z)   ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)-1, uint32_t(r0.z)   ,
+                        uint32_t(r0.x)  , uint32_t(r0.y)-1, uint32_t(r0.z)+1 ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)-1, uint32_t(r0.z)+1 ,id
+                    );
+                }
+                dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ] = nnTag1;
-                dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag1;
                 dpInteractionLattice[ x0PTwo + y0POne + z0POne ] = nnTag1;
 
-                dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] = nnTag2;
-                dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = nnTag2;
-                dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = nnTag2;
-                dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0MOne  + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0MOne  + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0MOne  + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0MOne  + z0POne ] = nnTag2;
+                }
                 break;
-            case 2: //-y
-                dpInteractionLattice[ x0Abs  + y0MOne + z0Abs  ] = nnTag1;
-                dpInteractionLattice[ x0POne + y0MOne + z0Abs  ] = nnTag1;
-                dpInteractionLattice[ x0Abs  + y0MOne + z0POne ] = nnTag1;
-                dpInteractionLattice[ x0POne + y0MOne + z0POne ] = nnTag1;
+            case 4:{ //-z
+                // dpInteractionLattice[ x0Abs  + y0Abs  + z0MOne ] = nnTag1;
+                // dpInteractionLattice[ x0Abs  + y0POne + z0MOne ] = nnTag1;
+                // dpInteractionLattice[ x0POne + y0Abs  + z0MOne ] = nnTag1;
+                // dpInteractionLattice[ x0POne + y0POne + z0MOne ] = nnTag1;
                 
-                dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag2;
-                dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0POne + z0POne ] = nnTag2;
-                break;
-            case 3: //+y
-                dpInteractionLattice[ x0Abs  + y0PTwo + z0Abs  ] = nnTag1;
-                dpInteractionLattice[ x0PTwo + y0PTwo + z0Abs  ] = nnTag1;
-                dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ] = nnTag1;
-                dpInteractionLattice[ x0PTwo + y0PTwo + z0POne ] = nnTag1;
-
-                dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = nnTag2;
-                dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag2;
-                break;
-            case 4: //-z
-                dpInteractionLattice[ x0Abs  + y0Abs  + z0MOne ] = nnTag1;
-                dpInteractionLattice[ x0Abs  + y0POne + z0MOne ] = nnTag1;
-                dpInteractionLattice[ x0POne + y0Abs  + z0MOne ] = nnTag1;
-                dpInteractionLattice[ x0POne + y0POne + z0MOne ] = nnTag1;
+                // dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = nnTag2;
+                // dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag2;
+                // dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag2;
+                // dpInteractionLattice[ x0POne + y0POne + z0POne ] = nnTag2;
+                T_InteractionTag nnTag1(dpInteractionLattice[ x0Abs + y0Abs + z0PTwo  ]);
+                if ( 
+                    dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs ] != nnTag2 || 
+                    dpInteractionLattice[ x0Abs  + y0POne + z0Abs ] != nnTag2 || 
+                    dpInteractionLattice[ x0POne + y0Abs  + z0Abs ] != nnTag2 || 
+                    dpInteractionLattice[ x0POne + y0POne + z0Abs ] != nnTag2  
+                ){
+                    printf("Wrong occupation in -z t1: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0POne + z0Abs ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0Abs  + z0Abs ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0POne + z0Abs ]),
+                        uint32_t(r0.x)  , uint32_t(r0.y)  , uint32_t(r0.z)   ,
+                        uint32_t(r0.x)  , uint32_t(r0.y)+1, uint32_t(r0.z)   ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)  , uint32_t(r0.z)   ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)+1, uint32_t(r0.z)  ,id
+                    );
+                }
+                if ( 
+                    dpInteractionLattice[ x0Abs  + y0Abs  + z0PTwo ] != nnTag1 || 
+                    dpInteractionLattice[ x0Abs  + y0POne + z0PTwo ] != nnTag1 || 
+                    dpInteractionLattice[ x0POne + y0Abs  + z0PTwo ] != nnTag1 || 
+                    dpInteractionLattice[ x0POne + y0POne + z0PTwo ] != nnTag1  
+                ){
+                    printf("Wrong occupation in -z t2: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0Abs  + z0PTwo ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0POne + z0PTwo ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0Abs  + z0PTwo ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0POne + z0PTwo ]),
+                        uint32_t(r0.x)  , uint32_t(r0.y)  , uint32_t(r0.z)+2 ,
+                        uint32_t(r0.x)  , uint32_t(r0.y)+1, uint32_t(r0.z)+2 ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)  , uint32_t(r0.z)+2 ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)+1, uint32_t(r0.z)+2 ,id
+                    );
+                }
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0POne + z0Abs ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs  + z0Abs ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0POne + z0Abs ] = nnTag1;
                 
-                dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = nnTag2;
-                dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0POne + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0PTwo ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0POne + z0PTwo ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0Abs  + z0PTwo ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0POne + z0PTwo ] = nnTag2;
+                }
                 break;
-            case 5: //+z
-                dpInteractionLattice[ x0Abs  + y0Abs  + z0PTwo ] = nnTag1;
-                dpInteractionLattice[ x0Abs  + y0POne + z0PTwo ] = nnTag1;
-                dpInteractionLattice[ x0POne + y0Abs  + z0PTwo ] = nnTag1;
-                dpInteractionLattice[ x0POne + y0POne + z0PTwo ] = nnTag1;
+            case 5:{ //+z
+                // dpInteractionLattice[ x0Abs  + y0Abs  + z0PTwo ] = nnTag1;
+                // dpInteractionLattice[ x0Abs  + y0POne + z0PTwo ] = nnTag1;
+                // dpInteractionLattice[ x0POne + y0Abs  + z0PTwo ] = nnTag1;
+                // dpInteractionLattice[ x0POne + y0POne + z0PTwo ] = nnTag1;
 
-                dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] = nnTag2;
-                dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = nnTag2;
-                dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag2;
+                // dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] = nnTag2;
+                // dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = nnTag2;
+                // dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = nnTag2;
+                // dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag2;
+                T_InteractionTag nnTag1(dpInteractionLattice[ x0Abs + y0Abs + z0MOne  ]);
+                if ( 
+                    dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] != nnTag2 || 
+                    dpInteractionLattice[ x0Abs  + y0POne + z0POne ] != nnTag2 || 
+                    dpInteractionLattice[ x0POne + y0Abs  + z0POne ] != nnTag2 || 
+                    dpInteractionLattice[ x0POne + y0POne + z0POne ] != nnTag2  
+                ){
+                    printf("Wrong occupation in +z t1: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0POne + z0POne ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0Abs  + z0POne ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0POne + z0POne ]),
+                        uint32_t(r0.x)  , uint32_t(r0.y)  , uint32_t(r0.z)+1 ,
+                        uint32_t(r0.x)  , uint32_t(r0.y)+1, uint32_t(r0.z)+1 ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)  , uint32_t(r0.z)+1 ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)+1, uint32_t(r0.z)+1 ,id
+                    );
+                }
+                if ( 
+                    dpInteractionLattice[ x0Abs  + y0Abs  + z0MOne ] != nnTag1 || 
+                    dpInteractionLattice[ x0Abs  + y0POne + z0MOne ] != nnTag1 || 
+                    dpInteractionLattice[ x0POne + y0Abs  + z0MOne ] != nnTag1 || 
+                    dpInteractionLattice[ x0POne + y0POne + z0MOne ] != nnTag1  
+                ){
+                    printf("Wrong occupation in +z t2 : %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0Abs  + z0MOne ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0POne + z0MOne ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0Abs  + z0MOne ]),
+                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0POne + z0MOne ]),
+                        uint32_t(r0.x)  , uint32_t(r0.y)  , uint32_t(r0.z)-1 ,
+                        uint32_t(r0.x)  , uint32_t(r0.y)+1, uint32_t(r0.z)-1 ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)  , uint32_t(r0.z)-1 ,
+                        uint32_t(r0.x)+1, uint32_t(r0.y)+1, uint32_t(r0.z)-1 ,id
+                    );
+                }
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0POne + z0POne ] = nnTag1;
+
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0MOne  ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0POne + z0MOne  ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0Abs  + z0MOne  ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0POne + z0MOne  ] = nnTag2;
+                }
                 break;
         }
     }
@@ -735,31 +1094,41 @@ void UpdaterGPU_Interaction<T_UCoordinateCuda>::initialize(){
 	{ decltype( dcBoxXM1) x = mBoxXM1; CUDA_ERROR( cudaMemcpyToSymbol( dcBoxXM1, &x, sizeof(x) ) ); }
 	{ decltype( dcBoxYM1) x = mBoxYM1; CUDA_ERROR( cudaMemcpyToSymbol( dcBoxYM1, &x, sizeof(x) ) ); }
 	{ decltype( dcBoxZM1) x = mBoxZM1; CUDA_ERROR( cudaMemcpyToSymbol( dcBoxZM1, &x, sizeof(x) ) ); }
+    uint64_t mBoxXLog2(0), mBoxXYLog2(0);
+    { auto dummy = mBoxX ; while ( dummy >>= 1 ) ++mBoxXLog2;
+      dummy = mBoxX*mBoxY; while ( dummy >>= 1 ) ++mBoxXYLog2;}
+    { decltype( dcBoxXLog2  ) x = mBoxXLog2  ; CUDA_ERROR( cudaMemcpyToSymbol( dcBoxXLog2 , &x, sizeof(x) ) ); }
+    { decltype( dcBoxXYLog2 ) x = mBoxXYLog2 ; CUDA_ERROR( cudaMemcpyToSymbol( dcBoxXYLog2, &x, sizeof(x) ) ); } 
+
 	uint32_t tmp_DXTableNN[18] = {  0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	uint32_t tmp_DYTableNN[18] = {  0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	uint32_t tmp_DZTableNN[18] = {  0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	CUDA_ERROR( cudaMemcpyToSymbol( DXTableNN_d, tmp_DXTableNN, sizeof( tmp_DXTableNN ) ) ); 
-	CUDA_ERROR( cudaMemcpyToSymbol( DYTableNN_d, tmp_DYTableNN, sizeof( tmp_DXTableNN ) ) );
-	CUDA_ERROR( cudaMemcpyToSymbol( DZTableNN_d, tmp_DZTableNN, sizeof( tmp_DXTableNN ) ) );
+	CUDA_ERROR( cudaMemcpyToSymbol( DYTableNN_d, tmp_DYTableNN, sizeof( tmp_DYTableNN ) ) );
+	CUDA_ERROR( cudaMemcpyToSymbol( DZTableNN_d, tmp_DZTableNN, sizeof( tmp_DZTableNN ) ) );
+    CheckBoxDimensions<<<1,1,0,mStream>>>();
+    CUDA_ERROR( cudaStreamSynchronize( mStream ) );
 	mLog( "Info" )<< "Initialize baseclass.done. \n" ;	
 
 	initializeInteractionLattice();
     auto const nSpecies = mnElementsInGroup.size();
     for ( uint32_t iSpecies = 0; iSpecies < nSpecies; ++iSpecies ){
         /* randomly choose which monomer group to advance */
-        auto const nThreads = 128;
+        auto const nThreads = 256;
         auto const nBlocks  = ceilDiv( mnElementsInGroup[ iSpecies ], nThreads );
         launch_initializeInteractionLattice(nBlocks,nThreads,iSpecies);
     }
     checkInteractionLatticeOccupation();
 	mLog( "Info" )<< "Initialize lattice.done. \n" ;
+
     for (auto i=0; i<20; i++ )
         for (auto j=0; j<20; j++ )
             mLog( "Info" )<< "interaction: probabilityLookup[" <<  i  <<","<<j << "]="<< probabilityLookup[i+1][j+1]  <<"\n";
     CUDA_ERROR( cudaMemcpyToSymbol( dcNNProbability, probabilityLookup, sizeof(probabilityLookup) ));
+    checkInteractionLatticeOccupation();
     kernelPrintTagType<<<20,20>>>();
-	miNewToi->popAsync();
-	CUDA_ERROR( cudaStreamSynchronize( mStream ) ); // finish e.g. initializations
+    checkCurve<<<32,1,0,mStream>>>(met);
+    CUDA_ERROR( cudaStreamSynchronize( mStream ) ); // finish e.g. initializations
 }
 ////////////////////////////////////////////////////////////////////////////////
 //implement setter function for the interaction tags and their energy //////////
@@ -767,7 +1136,7 @@ void UpdaterGPU_Interaction<T_UCoordinateCuda>::initialize(){
 template< typename T_UCoordinateCuda >
 void UpdaterGPU_Interaction<T_UCoordinateCuda>::setInteractionTag(
     uint32_t id, uint8_t tag ){
-    setAttributeTag(id, tag);
+    setAttributeTag(id, static_cast<uint32_t>(tag));
 }
 ////////////////////////////////////////////////////////////////////////////////
 template< typename T_UCoordinateCuda >
@@ -776,8 +1145,8 @@ void UpdaterGPU_Interaction<T_UCoordinateCuda>::setNNInteraction(
     if(0<typeA && typeA<=maxInteractionType && 0<typeB && typeB<=maxInteractionType){
         interactionTable[typeA+1][typeB+1]=energy;
         interactionTable[typeB+1][typeA+1]=energy;
-        probabilityLookup[typeA+1][typeB+1]=exp(-energy);
-        probabilityLookup[typeB+1][typeA+1]=exp(-energy);
+        probabilityLookup[typeA+1][typeB+1]=exp(energy);
+        probabilityLookup[typeB+1][typeA+1]=exp(energy);
         std::cout<<"set interation between types ";
         std::cout<<typeA<<" and "<<typeB<<" to "<<energy<<"kT\n";
     } else {
@@ -859,38 +1228,41 @@ void UpdaterGPU_Interaction< T_UCoordinateCuda >::runSimulationOnGPU(
 
             nSpeciesChosen[ iSpecies ] += 1;
 			// if (!diagMovesOn) {
+                std::cout << "species=" << iSpecies <<" " << useCudaMemset<<std::endl;
 				this-> template launch_CheckSpecies<6>(nBlocks, nThreads, iSpecies, iOffsetLatticeTmp, seed);
-                launch_CheckSpeciesInteraction(nBlocks, nThreads, iSpecies,seed );
-				if ( useCudaMemset )
-					launch_PerformSpeciesAndApply(nBlocks, nThreads, iSpecies, texLatticeTmp );
-				else
-					launch_PerformSpecies(nBlocks,nThreads,iSpecies,texLatticeTmp );
+                // launch_CheckSpeciesInteraction(nBlocks, nThreads, iSpecies,seed );
+                // launch_resetInteractionLattice(nBlocks,nThreads,iSpecies);
+                launch_PerformSpeciesAndApply(nBlocks, nThreads, iSpecies, texLatticeTmp );
                 launch_ApplyInteraction(nBlocks, nThreads, iSpecies);
-			// }else{
+                // launch_initializeInteractionLattice(nBlocks,nThreads,iSpecies);
+
 			// 	this-> template launch_CheckSpecies<18>(nBlocks, nThreads, iSpecies, iOffsetLatticeTmp, seed);
-			// 	if ( useCudaMemset )
-			// 		launch_PerformSpeciesAndApply(nBlocks, nThreads, iSpecies, texLatticeTmp );
-			// 	else
-			// 		launch_PerformSpecies(nBlocks,nThreads,iSpecies,texLatticeTmp );
-			// }
-            if ( useCudaMemset ){
-                if(met.getPacking().getNBufferedTmpLatticeOn()){
-                    /* we only need to delete when buffers will wrap around and
-                        * on the last loop, so that on next runSimulationOnGPU
-                        * call mLatticeTmp is clean */
-                    if ( ( iStepTotal % mnLatticeTmpBuffers == 0 ) ||
-                        ( iStep == nMonteCarloSteps-1 && iSubStep == nSpecies-1 ) )
-                    {
-                        cudaMemsetAsync( (void*) mLatticeTmp->gpu, 0, mLatticeTmp->nBytes, mStream );
-                    }
-                }else
-                    mLatticeTmp->memsetAsync(0);
-            }
-            else
-                launch_ZeroArraySpecies(nBlocks,nThreads,iSpecies);
+            if(met.getPacking().getNBufferedTmpLatticeOn()){
+                /* we only need to delete when buffers will wrap around and
+                    * on the last loop, so that on next runSimulationOnGPU
+                    * call mLatticeTmp is clean */
+                if ( ( iStepTotal % mnLatticeTmpBuffers == 0 ) ||
+                    ( iStep == nMonteCarloSteps-1 && iSubStep == nSpecies-1 ) )
+                {
+                    cudaMemsetAsync( (void*) mLatticeTmp->gpu, 0, mLatticeTmp->nBytes, mStream );
+                }
+            }else
+                mLatticeTmp->memsetAsync(0);
             chooseThreads.analyze(iSpecies,mStream);
+            // cudaMemsetAsync( (void*) mLatticeInteractionTag->gpu, 0, mLatticeInteractionTag->nBytes, mStream );
+            // mLatticeInteractionTag->memsetAsync(0);
+            // for ( uint32_t iSpecies = 0; iSpecies < nSpecies; ++iSpecies ){
+            //     auto const nThreads = 256;
+            //     auto const nBlocks  = ceilDiv( mnElementsInGroup[ iSpecies ], nThreads );
+            //     launch_initializeInteractionLattice(nBlocks,nThreads,iSpecies);
+            // }
+            
+            
+            CUDA_ERROR( cudaStreamSynchronize( mStream ) );
+            checkInteractionLatticeOccupation();
 		} // iSubstep
     } // iStep
+    CUDA_ERROR( cudaStreamSynchronize( mStream ) );
     std::clock_t const t1 = std::clock();
     double const dt = float(t1-t0) / CLOCKS_PER_SEC;
     mLog( "Info" )
@@ -898,7 +1270,11 @@ void UpdaterGPU_Interaction< T_UCoordinateCuda >::runSimulationOnGPU(
         << "mcs = " << nMonteCarloSteps  << "  speed [performed monomer try and move/s] = MCS*N/t: "
         << nMonteCarloSteps * ( mnAllMonomers / dt )  << "     runtime[s]:" << dt << "\n";
 	checkSystem(); // no-op if "Check"-level deactivated
+    checkInteractionLatticeOccupation();
+    CUDA_ERROR( cudaStreamSynchronize( mStream ) );
     BaseClass::doCopyBack();
+    // if (mLog.isActive( "Check" ) )
+    
 }
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
