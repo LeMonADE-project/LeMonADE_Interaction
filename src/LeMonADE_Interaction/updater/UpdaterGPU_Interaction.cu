@@ -51,43 +51,19 @@ along with LeMonADE.  If not, see <http://www.gnu.org/licenses/>.
 #include <LeMonADEGPU/core/Method.h>
 #include <LeMonADEGPU/utility/DeleteMirroredObject.h>
 #include <LeMonADEGPU/core/BondVectorSet.h>
+///////////////////////////////////////////////////////////////////////////////
 using T_Flags            = UpdaterGPU_Interaction< uint8_t >::T_Flags         ;
 using T_Id               = UpdaterGPU_Interaction< uint8_t >::T_Id            ;
 using T_InteractionTag   = UpdaterGPU_Interaction< uint8_t >::T_InteractionTag;
 using T_Color            = UpdaterGPU_Interaction< uint8_t >::T_Color         ;
+///////////////////////////////////////////////////////////////////////////////
 __device__ __constant__ uint32_t DXTableNN_d[18];
 __device__ __constant__ uint32_t DYTableNN_d[18];
 __device__ __constant__ uint32_t DZTableNN_d[18];
 __device__ __constant__ double dcNNProbability[32][32];
+///////////////////////////////////////////////////////////////////////////////
 __global__ void  kernelPrintTagType(){
-
-    // auto T_Id id = blockIdx.x * blockDim.x + threadIdx.x;
     printf("TagType[%d][%d]=%f\n",blockIdx.x,  threadIdx.x, dcNNProbability[blockIdx.x][threadIdx.x] );
-}
-/**
- * @brief convinience function to print the box dimensions for the device constants 
- */
- __global__ void CheckBoxDimensions()
- {
- printf("KernelCheckBoxDimensions: %d %d %d %d %d %d  %d %d \n",dcBoxX, dcBoxY, dcBoxZ,dcBoxXM1, dcBoxYM1,dcBoxZM1, dcBoxXLog2, dcBoxXYLog2 );
- }
- __global__ void checkCurve(
-     Method const met
- ){
-    uint32_t id = blockIdx.x * blockDim.x + threadIdx.x;
-    uint32_t x(met.getCurve().linearizeBoxVectorIndexX(id));
-    uint32_t y(met.getCurve().linearizeBoxVectorIndexY(id));
-    uint32_t z(met.getCurve().linearizeBoxVectorIndexZ(id));
-
-    uint32_t xM2(met.getCurve().linearizeBoxVectorIndexX(id+(0u-2u)));
-    uint32_t yM2(met.getCurve().linearizeBoxVectorIndexY(id+(0u-2u)));
-    uint32_t zM2(met.getCurve().linearizeBoxVectorIndexZ(id+(0u-2u)));
-
-    uint32_t xP2(met.getCurve().linearizeBoxVectorIndexX(id+2u));
-    uint32_t yP2(met.getCurve().linearizeBoxVectorIndexY(id+2u));
-    uint32_t zP2(met.getCurve().linearizeBoxVectorIndexZ(id+2u));
-
-    printf("%d (%d %d %d) (%d %d %d) (%d %d %d) %d \n", id, x,y,z,xM2,yM2,zM2,xP2,yP2,zP2,( (-2) & dcBoxXM1 )  );
 }
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -129,18 +105,15 @@ __global__ void kernelUpdateInteractionLattice
         
         auto const r0 = dpPolymerSystem[ iOffset + id ];
         T_InteractionTag const interactionTag( dInteractionTag[iOffset + id] + T_InteractionTag(1) );
-        uint32_t x=r0.x;
-        uint32_t y=r0.y;
-        uint32_t z=r0.z;
 
-        auto const x0Abs  = met.getCurve().linearizeBoxVectorIndexX( x               );
-        auto const x0POne = met.getCurve().linearizeBoxVectorIndexX( x + uint32_t(1) );
+        auto const x0Abs  = met.getCurve().linearizeBoxVectorIndexX( r0.x               );
+        auto const x0POne = met.getCurve().linearizeBoxVectorIndexX( r0.x + uint32_t(1) );
     
-        auto const y0Abs  = met.getCurve().linearizeBoxVectorIndexY( y                );
-        auto const y0POne = met.getCurve().linearizeBoxVectorIndexY( y  + uint32_t(1) );
+        auto const y0Abs  = met.getCurve().linearizeBoxVectorIndexY( r0.y                );
+        auto const y0POne = met.getCurve().linearizeBoxVectorIndexY( r0.y  + uint32_t(1) );
     
-        auto const z0Abs  = met.getCurve().linearizeBoxVectorIndexZ( z                );
-        auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( z  + uint32_t(1) );
+        auto const z0Abs  = met.getCurve().linearizeBoxVectorIndexZ( r0.z                );
+        auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( r0.z  + uint32_t(1) );
         
         if (
             dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] != T_InteractionTag(0) ||
@@ -222,18 +195,15 @@ __global__ void kernelResetInteractionLattice
         auto const r0 = dpPolymerSystem[ iOffset + id ];
         T_InteractionTag const interactionTagReset(0);
         T_InteractionTag const interactionTag( dInteractionTag[iOffset + id] + T_InteractionTag(1) );
-        uint32_t x=r0.x;
-        uint32_t y=r0.y;
-        uint32_t z=r0.z;
 
-        auto const x0Abs  = met.getCurve().linearizeBoxVectorIndexX( x               );
-        auto const x0POne = met.getCurve().linearizeBoxVectorIndexX( x + uint32_t(1) );
+        auto const x0Abs  = met.getCurve().linearizeBoxVectorIndexX( r0.x               );
+        auto const x0POne = met.getCurve().linearizeBoxVectorIndexX( r0.x + uint32_t(1) );
     
-        auto const y0Abs  = met.getCurve().linearizeBoxVectorIndexY( y                );
-        auto const y0POne = met.getCurve().linearizeBoxVectorIndexY( y  + uint32_t(1) );
+        auto const y0Abs  = met.getCurve().linearizeBoxVectorIndexY( r0.y                );
+        auto const y0POne = met.getCurve().linearizeBoxVectorIndexY( r0.y  + uint32_t(1) );
     
-        auto const z0Abs  = met.getCurve().linearizeBoxVectorIndexZ( z                );
-        auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( z  + uint32_t(1) );
+        auto const z0Abs  = met.getCurve().linearizeBoxVectorIndexZ( r0.z                );
+        auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( r0.z  + uint32_t(1) );
         if (
             dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs  ] != interactionTag ||
             dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] != interactionTag ||
@@ -396,7 +366,7 @@ __device__ inline double calcInteractionProbability(
     auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( z0 + dz + uint32_t(1) );
     auto const z0PTwo = met.getCurve().linearizeBoxVectorIndexZ( z0 + dz + uint32_t(2) );
 
-    auto typeA(dpInteractionLattice[ x0Abs + y0Abs + z0Abs ] );
+    auto const typeA(dpInteractionLattice[ x0Abs + y0Abs + z0Abs ] );
     double prop(1);
     switch ( axis >> 1 ){
         case 0 : //+-x
@@ -581,28 +551,25 @@ Method              const              met
          * Solution: Rewrite the adressing of the lattice...
          */
         auto const r0 = dpPolymerSystem[ id ] ;
-        uint32_t x=r0.x;
-        uint32_t y=r0.y;
-        uint32_t z=r0.z;
 
-        auto const x0MOne = met.getCurve().linearizeBoxVectorIndexX( x - uint32_t(1) );
-        auto const x0Abs  = met.getCurve().linearizeBoxVectorIndexX( x               );
-        auto const x0POne = met.getCurve().linearizeBoxVectorIndexX( x + uint32_t(1) );
-        auto const x0PTwo = met.getCurve().linearizeBoxVectorIndexX( x + uint32_t(2) );
+        auto const x0MOne = met.getCurve().linearizeBoxVectorIndexX( r0.x - uint32_t(1) );
+        auto const x0Abs  = met.getCurve().linearizeBoxVectorIndexX( r0.x               );
+        auto const x0POne = met.getCurve().linearizeBoxVectorIndexX( r0.x + uint32_t(1) );
+        auto const x0PTwo = met.getCurve().linearizeBoxVectorIndexX( r0.x + uint32_t(2) );
 
-        auto const y0MOne = met.getCurve().linearizeBoxVectorIndexY( y - uint32_t(1) );
-        auto const y0Abs  = met.getCurve().linearizeBoxVectorIndexY( y               );
-        auto const y0POne = met.getCurve().linearizeBoxVectorIndexY( y + uint32_t(1) );
-        auto const y0PTwo = met.getCurve().linearizeBoxVectorIndexY( y + uint32_t(2) );
+        auto const y0MOne = met.getCurve().linearizeBoxVectorIndexY( r0.y - uint32_t(1) );
+        auto const y0Abs  = met.getCurve().linearizeBoxVectorIndexY( r0.y               );
+        auto const y0POne = met.getCurve().linearizeBoxVectorIndexY( r0.y + uint32_t(1) );
+        auto const y0PTwo = met.getCurve().linearizeBoxVectorIndexY( r0.y + uint32_t(2) );
     
-        auto const z0MOne = met.getCurve().linearizeBoxVectorIndexZ( z - uint32_t(1) );
-        auto const z0Abs  = met.getCurve().linearizeBoxVectorIndexZ( z               );
-        auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( z + uint32_t(1) );
-        auto const z0PTwo = met.getCurve().linearizeBoxVectorIndexZ( z + uint32_t(2) );
-        T_InteractionTag nnTag2(T_InteractionTag(0));
+        auto const z0MOne = met.getCurve().linearizeBoxVectorIndexZ( r0.z - uint32_t(1) );
+        auto const z0Abs  = met.getCurve().linearizeBoxVectorIndexZ( r0.z               );
+        auto const z0POne = met.getCurve().linearizeBoxVectorIndexZ( r0.z + uint32_t(1) );
+        auto const z0PTwo = met.getCurve().linearizeBoxVectorIndexZ( r0.z + uint32_t(2) );
+        T_InteractionTag const nnTag2(T_InteractionTag(0));
         switch(direction){ 
             case 0:{ //-x
-                T_InteractionTag nnTag1(dpInteractionLattice[ x0PTwo + y0Abs + z0Abs  ]);
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0PTwo + y0Abs + z0Abs  ]);
                 dpInteractionLattice[ x0Abs + y0Abs  + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0Abs + y0POne + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0Abs + y0Abs  + z0POne ] = nnTag1;
@@ -615,7 +582,7 @@ Method              const              met
                 }
                 break;
             case 1:{ //+x
-                T_InteractionTag nnTag1(dpInteractionLattice[ x0MOne + y0Abs + z0Abs  ]);
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0MOne + y0Abs + z0Abs  ]);
                 dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag1;
@@ -628,7 +595,7 @@ Method              const              met
                 }
                 break;
             case 2:{ //-y
-                T_InteractionTag nnTag1(dpInteractionLattice[ x0Abs + y0PTwo + z0Abs  ]);
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0Abs + y0PTwo + z0Abs  ]);
                 dpInteractionLattice[ x0Abs  + y0Abs + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0POne + y0Abs + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0Abs  + y0Abs + z0POne ] = nnTag1;
@@ -641,7 +608,7 @@ Method              const              met
                 }
                 break;
             case 3:{ //+y
-                T_InteractionTag nnTag1(dpInteractionLattice[ x0Abs + y0MOne + z0Abs  ]);
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0Abs + y0MOne + z0Abs  ]);
                 dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag1;
@@ -654,7 +621,7 @@ Method              const              met
                 }
                 break;
             case 4:{ //-z
-                T_InteractionTag nnTag1(dpInteractionLattice[ x0Abs + y0Abs + z0PTwo  ]);
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0Abs + y0Abs + z0PTwo  ]);
                 dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs ] = nnTag1;
                 dpInteractionLattice[ x0Abs  + y0POne + z0Abs ] = nnTag1;
                 dpInteractionLattice[ x0POne + y0Abs  + z0Abs ] = nnTag1;
@@ -667,7 +634,7 @@ Method              const              met
                 }
                 break;
             case 5:{ //+z
-                T_InteractionTag nnTag1(dpInteractionLattice[ x0Abs + y0Abs + z0MOne  ]);
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0Abs + y0Abs + z0MOne  ]);
                 dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = nnTag1;
                 dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag1;
                 dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag1;
@@ -710,7 +677,7 @@ mInteractionTag        	( NULL )
      * the output as "Info" log level
      */
     mLog.file( __FILENAME__ );
-    mLog.activate( "Check"     );
+    mLog.deactivate( "Check"     );
     mLog.activate( "Error"     );
     mLog.activate( "Info"      );
     mLog.deactivate( "Stats"     );
@@ -868,7 +835,6 @@ void UpdaterGPU_Interaction<T_UCoordinateCuda>::initialize(){
 	CUDA_ERROR( cudaMemcpyToSymbol( DXTableNN_d, tmp_DXTableNN, sizeof( tmp_DXTableNN ) ) ); 
 	CUDA_ERROR( cudaMemcpyToSymbol( DYTableNN_d, tmp_DYTableNN, sizeof( tmp_DYTableNN ) ) );
 	CUDA_ERROR( cudaMemcpyToSymbol( DZTableNN_d, tmp_DZTableNN, sizeof( tmp_DZTableNN ) ) );
-    CheckBoxDimensions<<<1,1,0,mStream>>>();
     CUDA_ERROR( cudaStreamSynchronize( mStream ) );
 	mLog( "Info" )<< "Initialize baseclass.done. \n" ;	
 
@@ -888,8 +854,7 @@ void UpdaterGPU_Interaction<T_UCoordinateCuda>::initialize(){
             mLog( "Info" )<< "interaction: probabilityLookup[" <<  i  <<","<<j << "]="<< probabilityLookup[i+1][j+1]  <<"\n";
     CUDA_ERROR( cudaMemcpyToSymbol( dcNNProbability, probabilityLookup, sizeof(probabilityLookup) ));
     checkInteractionLatticeOccupation();
-    kernelPrintTagType<<<20,20>>>();
-    checkCurve<<<32,1,0,mStream>>>(met);
+    kernelPrintTagType<<<5,5>>>();
     CUDA_ERROR( cudaStreamSynchronize( mStream ) ); // finish e.g. initializations
 }
 ////////////////////////////////////////////////////////////////////////////////
