@@ -397,99 +397,98 @@ __device__ inline double calcInteractionProbability(
     auto const z0PTwo = met.getCurve().linearizeBoxVectorIndexZ( z0 + dz + uint32_t(2) );
 
     auto typeA(dpInteractionLattice[ x0Abs + y0Abs + z0Abs ] );
-    // printf("tagType: %d %d %.10f\n",typeA, dpInteractionLattice[ x0MTwo + y0Abs  + z0Abs  ], getProbability(typeA, dpInteractionLattice[ x0MTwo + y0Abs  + z0Abs  ]));
     double prop(1);
     switch ( axis >> 1 ){
         case 0 : //+-x
-            prop*=getProbability(typeA, dpInteractionLattice[ x0MTwo + y0Abs  + z0Abs  ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0MTwo + y0POne + z0Abs  ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0MTwo + y0Abs  + z0POne ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0MTwo + y0POne + z0POne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0MTwo + y0Abs  + z0Abs  ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0MTwo + y0POne + z0Abs  ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0MTwo + y0Abs  + z0POne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0MTwo + y0POne + z0POne ]);
 
-            prop*=getProbability(typeA, dpInteractionLattice[ x0MOne + y0MOne + z0Abs  ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0MOne + y0MOne + z0POne ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0MOne + y0Abs  + z0MOne ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0MOne + y0Abs  + z0PTwo ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0MOne + y0POne + z0MOne ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0MOne + y0POne + z0PTwo ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0MOne + y0PTwo + z0Abs  ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0MOne + y0PTwo + z0POne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0MOne + y0MOne + z0Abs  ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0MOne + y0MOne + z0POne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0MOne + y0Abs  + z0MOne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0MOne + y0Abs  + z0PTwo ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0MOne + y0POne + z0MOne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0MOne + y0POne + z0PTwo ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0MOne + y0PTwo + z0Abs  ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0MOne + y0PTwo + z0POne ]);
 
-            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0MOne + z0Abs  ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0MOne + z0POne ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0Abs  + z0MOne ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0Abs  + z0PTwo ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0POne + z0MOne ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0POne + z0PTwo ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0Abs  ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0MOne + z0Abs  ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0MOne + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0Abs  + z0MOne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0Abs  + z0PTwo ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0POne + z0MOne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0POne + z0PTwo ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0Abs  ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0POne ]);
 
-            prop/=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0Abs  + z0Abs  ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0POne + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0Abs  + z0Abs  ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0POne + z0POne ]);
         
             if(dx==0){prop=1./prop;}
             break;
         case 1 : //+-y
-            prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0MTwo + z0Abs  ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0MTwo + z0Abs  ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0MTwo + z0POne ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0MTwo + z0POne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0MTwo + z0Abs  ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0MTwo + z0Abs  ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0MTwo + z0POne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0MTwo + z0POne ]);
 
-            prop*=getProbability(typeA, dpInteractionLattice[ x0MOne + y0MOne + z0Abs  ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0MOne + y0MOne + z0POne ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0MOne + z0MOne ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0MOne + z0PTwo ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0MOne + z0MOne ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0MOne + z0PTwo ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0MOne + z0Abs  ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0MOne + z0POne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0MOne + y0MOne + z0Abs  ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0MOne + y0MOne + z0POne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0MOne + z0MOne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0MOne + z0PTwo ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0MOne + z0MOne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0MOne + z0PTwo ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0MOne + z0Abs  ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0MOne + z0POne ]);
 
-            prop/=getProbability(typeA, dpInteractionLattice[ x0MOne + y0POne + z0Abs  ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0MOne + y0POne + z0POne ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0POne + z0MOne ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0POne + z0PTwo ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0POne + z0MOne ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0POne + z0PTwo ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0POne + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0MOne + y0POne + z0Abs  ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0MOne + y0POne + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0POne + z0MOne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0POne + z0PTwo ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0POne + z0MOne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0POne + z0PTwo ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0POne + z0POne ]);
 
-            prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0PTwo + z0Abs  ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0Abs  ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0PTwo + z0Abs  ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0Abs  ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0POne ]);
                 
             if(dy==0){prop=1./prop;}                        
             break;
         case 2 : //+-z
-            prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0Abs  + z0MTwo ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0Abs  + z0MTwo ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0POne + z0MTwo ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0POne + z0MTwo ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0Abs  + z0MTwo ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0Abs  + z0MTwo ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0POne + z0MTwo ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0POne + z0MTwo ]);
          
-            prop*=getProbability(typeA, dpInteractionLattice[ x0MOne + y0Abs  + z0MOne ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0MOne + y0POne + z0MOne ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0MOne + z0MOne ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0PTwo + z0MOne ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0MOne + z0MOne ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0MOne ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0Abs  + z0MOne ]);
-            prop*=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0POne + z0MOne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0MOne + y0Abs  + z0MOne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0MOne + y0POne + z0MOne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0MOne + z0MOne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0PTwo + z0MOne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0MOne + z0MOne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0MOne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0Abs  + z0MOne ]);
+            prop/=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0POne + z0MOne ]);
 
-            prop/=getProbability(typeA, dpInteractionLattice[ x0MOne + y0Abs  + z0POne ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0MOne + y0POne + z0POne ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0MOne + z0POne ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0MOne + z0POne ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0POne ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0POne + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0MOne + y0Abs  + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0MOne + y0POne + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0MOne + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0MOne + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0POne + z0POne ]);
 
-            prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0Abs  + z0PTwo ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0Abs  + z0PTwo ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0POne + z0PTwo ]);
-            prop/=getProbability(typeA, dpInteractionLattice[ x0POne + y0POne + z0PTwo ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0Abs  + z0PTwo ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0Abs  + z0PTwo ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0Abs  + y0POne + z0PTwo ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0POne + z0PTwo ]);
         
             if(dz==0){prop=1./prop;}
             break;
@@ -532,13 +531,9 @@ __device__ inline double calcInteractionProbability(
         auto direction = properties & T_Flags(31); // 7=0b111 31=0b11111
         auto const r0 = dpPolymerSystem[ id ];
         auto const intProp(calcInteractionProbability( dpInteractionLattice, r0.x, r0.y, r0.z, direction, met ));
-        // printf("intProp %d %.15f\n",id, intProp);
-        // if ( ! ( rng.rng_d() < intProp  ) ) {
         Saru rng(rGlobalIteration,id+iOffset,rSeed);
         if ( rng.rng_d() < intProp ) {
-             /* move is not allowed due to the interaction  */
-            // direction ^= T_Flags(32) /* cannot -move-modification */;
-            // dpPolymerFlags[ id ] = direction;
+             /* move is still allowed */
             direction += T_Flags(32);
         }
         dpPolymerFlags[ id ] = direction;
@@ -576,7 +571,6 @@ Method              const              met
     for ( T_Id id = blockIdx.x * blockDim.x + threadIdx.x;
         id < nMonomers; id += gridDim.x * blockDim.x ){
         auto const properties = dpPolymerFlags[ id ];
-        // if ( ( properties & T_Flags(32) ) == T_Flags(0) ) // impossible move
         if ( ! ( properties & T_Flags(32) ) ) // impossible move
             continue; 
         auto const direction = properties & T_Flags(31); // 7=0b111 31=0b11111
@@ -609,41 +603,6 @@ Method              const              met
         switch(direction){ 
             case 0:{ //-x
                 T_InteractionTag nnTag1(dpInteractionLattice[ x0PTwo + y0Abs + z0Abs  ]);
-                if ( 
-                    dpInteractionLattice[ x0Abs + y0Abs  + z0Abs  ] != nnTag2 || 
-                    dpInteractionLattice[ x0Abs + y0POne + z0Abs  ] != nnTag2 || 
-                    dpInteractionLattice[ x0Abs + y0Abs  + z0POne ] != nnTag2 || 
-                    dpInteractionLattice[ x0Abs + y0POne + z0POne ] != nnTag2  
-                ){
-                    printf("Wrong occupation in -x t1: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs + y0Abs  + z0Abs  ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs + y0POne + z0Abs  ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs + y0Abs  + z0POne ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs + y0POne + z0POne ]),
-                        uint32_t(r0.x), uint32_t(r0.y)  , uint32_t(r0.z)   ,
-                        uint32_t(r0.x), uint32_t(r0.y)+1, uint32_t(r0.z)   ,
-                        uint32_t(r0.x), uint32_t(r0.y)  , uint32_t(r0.z)+1 ,
-                        uint32_t(r0.x), uint32_t(r0.y)+1, uint32_t(r0.z)+1 ,id
-                    );
-                }
-                if ( 
-                    dpInteractionLattice[ x0PTwo + y0Abs  + z0Abs  ] != nnTag1 || 
-                    dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ] != nnTag1 || 
-                    dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ] != nnTag1 || 
-                    dpInteractionLattice[ x0PTwo + y0POne + z0POne ] != nnTag1  
-                ){
-                    printf("Wrong occupation in -x t2: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
-                        static_cast<uint32_t>(dpInteractionLattice[ x0PTwo + y0Abs  + z0Abs  ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0PTwo + y0POne + z0POne ]),
-                        uint32_t(r0.x)+2, uint32_t(r0.y)  , uint32_t(r0.z)   ,
-                        uint32_t(r0.x)+2, uint32_t(r0.y)+1, uint32_t(r0.z)   ,
-                        uint32_t(r0.x)+2, uint32_t(r0.y)  , uint32_t(r0.z)+1 ,
-                        uint32_t(r0.x)+2, uint32_t(r0.y)+1, uint32_t(r0.z)+1 ,id
-                    );
-                }
-
                 dpInteractionLattice[ x0Abs + y0Abs  + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0Abs + y0POne + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0Abs + y0Abs  + z0POne ] = nnTag1;
@@ -657,40 +616,6 @@ Method              const              met
                 break;
             case 1:{ //+x
                 T_InteractionTag nnTag1(dpInteractionLattice[ x0MOne + y0Abs + z0Abs  ]);
-                if ( 
-                    dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] != nnTag2 || 
-                    dpInteractionLattice[ x0POne + y0POne + z0Abs  ] != nnTag2 || 
-                    dpInteractionLattice[ x0POne + y0Abs  + z0POne ] != nnTag2 || 
-                    dpInteractionLattice[ x0POne + y0POne + z0POne ] != nnTag2  
-                ){
-                    printf("Wrong occupation in +x t1: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0POne + z0Abs  ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0Abs  + z0POne ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0POne + z0POne ]),
-                        uint32_t(r0.x)+1, uint32_t(r0.y)  , uint32_t(r0.z)   ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)+1, uint32_t(r0.z)   ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)  , uint32_t(r0.z)+1 ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)+1, uint32_t(r0.z)+1 ,id
-                    );
-                }
-                if ( 
-                    dpInteractionLattice[ x0MOne + y0Abs  + z0Abs  ] != nnTag1 || 
-                    dpInteractionLattice[ x0MOne + y0POne + z0Abs  ] != nnTag1 || 
-                    dpInteractionLattice[ x0MOne + y0Abs  + z0POne ] != nnTag1 || 
-                    dpInteractionLattice[ x0MOne + y0POne + z0POne ] != nnTag1  
-                ){
-                    printf("Wrong occupation in +x t2: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
-                        static_cast<uint32_t>(dpInteractionLattice[ x0MOne + y0Abs  + z0Abs  ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0MOne + y0POne + z0Abs   ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0MOne + y0Abs  + z0POne  ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0MOne + y0POne + z0POne]),
-                        uint32_t(r0.x)-1, uint32_t(r0.y)  , uint32_t(r0.z)   ,
-                        uint32_t(r0.x)-1, uint32_t(r0.y)+1, uint32_t(r0.z)   ,
-                        uint32_t(r0.x)-1, uint32_t(r0.y)  , uint32_t(r0.z)+1 ,
-                        uint32_t(r0.x)-1, uint32_t(r0.y)+1, uint32_t(r0.z)+1 ,id
-                    );
-                }
                 dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag1;
@@ -701,45 +626,9 @@ Method              const              met
                 dpInteractionLattice[ x0MOne  + y0Abs  + z0POne ] = nnTag2;
                 dpInteractionLattice[ x0MOne  + y0POne + z0POne ] = nnTag2;
                 }
-
                 break;
             case 2:{ //-y
                 T_InteractionTag nnTag1(dpInteractionLattice[ x0Abs + y0PTwo + z0Abs  ]);
-                if ( 
-                    dpInteractionLattice[ x0Abs  + y0Abs + z0Abs  ] != nnTag2 || 
-                    dpInteractionLattice[ x0POne + y0Abs + z0Abs  ] != nnTag2 || 
-                    dpInteractionLattice[ x0Abs  + y0Abs + z0POne ] != nnTag2 || 
-                    dpInteractionLattice[ x0POne + y0Abs + z0POne ] != nnTag2  
-                ){
-                    printf("Wrong occupation in -y t1: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0Abs + z0Abs  ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0Abs + z0Abs  ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0Abs + z0POne ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0Abs + z0POne ]),
-                        uint32_t(r0.x)  , uint32_t(r0.y)  , uint32_t(r0.z)   ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)  , uint32_t(r0.z)   ,
-                        uint32_t(r0.x)  , uint32_t(r0.y)  , uint32_t(r0.z)+1 ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)  , uint32_t(r0.z)+1 ,id
-                    );
-                }
-                if ( 
-                    dpInteractionLattice[ x0Abs  + y0PTwo + z0Abs  ] != nnTag1 || 
-                    dpInteractionLattice[ x0POne + y0PTwo + z0Abs  ] != nnTag1 || 
-                    dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ] != nnTag1 || 
-                    dpInteractionLattice[ x0POne + y0PTwo + z0POne ] != nnTag1  
-                ){
-                    printf("Wrong occupation in -y t2: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0PTwo + z0Abs  ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0PTwo + z0Abs  ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0PTwo + z0POne ]),
-                        uint32_t(r0.x)  , uint32_t(r0.y)+2, uint32_t(r0.z)   ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)+2, uint32_t(r0.z)   ,
-                        uint32_t(r0.x)  , uint32_t(r0.y)+2, uint32_t(r0.z)+1 ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)+2, uint32_t(r0.z)+1 ,id
-                    );
-                } 
-
                 dpInteractionLattice[ x0Abs  + y0Abs + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0POne + y0Abs + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0Abs  + y0Abs + z0POne ] = nnTag1;
@@ -753,40 +642,6 @@ Method              const              met
                 break;
             case 3:{ //+y
                 T_InteractionTag nnTag1(dpInteractionLattice[ x0Abs + y0MOne + z0Abs  ]);
-                if ( 
-                    dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] != nnTag2 || 
-                    dpInteractionLattice[ x0POne + y0POne + z0Abs  ] != nnTag2 || 
-                    dpInteractionLattice[ x0Abs  + y0POne + z0POne ] != nnTag2 || 
-                    dpInteractionLattice[ x0POne + y0POne + z0POne ] != nnTag2  
-                ){
-                    printf("Wrong occupation in +y t1: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0POne + z0Abs  ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0POne + z0POne ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0POne + z0POne ]),
-                        uint32_t(r0.x)  , uint32_t(r0.y)+1, uint32_t(r0.z)   ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)+1, uint32_t(r0.z)   ,
-                        uint32_t(r0.x)  , uint32_t(r0.y)+1, uint32_t(r0.z)+1 ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)+1, uint32_t(r0.z)+1 ,id
-                    );
-                }
-                if ( 
-                    dpInteractionLattice[ x0Abs  + y0MOne + z0Abs  ] != nnTag1 || 
-                    dpInteractionLattice[ x0POne + y0MOne + z0Abs  ] != nnTag1 || 
-                    dpInteractionLattice[ x0Abs  + y0MOne + z0POne ] != nnTag1 || 
-                    dpInteractionLattice[ x0POne + y0MOne + z0POne ] != nnTag1  
-                ){
-                    printf("Wrong occupation in +y t2: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0MOne + z0Abs  ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0MOne + z0Abs  ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0MOne + z0POne ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0MOne + z0POne ]),
-                        uint32_t(r0.x)  , uint32_t(r0.y)-1, uint32_t(r0.z)   ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)-1, uint32_t(r0.z)   ,
-                        uint32_t(r0.x)  , uint32_t(r0.y)-1, uint32_t(r0.z)+1 ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)-1, uint32_t(r0.z)+1 ,id
-                    );
-                }
                 dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag1;
                 dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag1;
@@ -800,40 +655,6 @@ Method              const              met
                 break;
             case 4:{ //-z
                 T_InteractionTag nnTag1(dpInteractionLattice[ x0Abs + y0Abs + z0PTwo  ]);
-                if ( 
-                    dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs ] != nnTag2 || 
-                    dpInteractionLattice[ x0Abs  + y0POne + z0Abs ] != nnTag2 || 
-                    dpInteractionLattice[ x0POne + y0Abs  + z0Abs ] != nnTag2 || 
-                    dpInteractionLattice[ x0POne + y0POne + z0Abs ] != nnTag2  
-                ){
-                    printf("Wrong occupation in -z t1: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0POne + z0Abs ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0Abs  + z0Abs ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0POne + z0Abs ]),
-                        uint32_t(r0.x)  , uint32_t(r0.y)  , uint32_t(r0.z)   ,
-                        uint32_t(r0.x)  , uint32_t(r0.y)+1, uint32_t(r0.z)   ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)  , uint32_t(r0.z)   ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)+1, uint32_t(r0.z)  ,id
-                    );
-                }
-                if ( 
-                    dpInteractionLattice[ x0Abs  + y0Abs  + z0PTwo ] != nnTag1 || 
-                    dpInteractionLattice[ x0Abs  + y0POne + z0PTwo ] != nnTag1 || 
-                    dpInteractionLattice[ x0POne + y0Abs  + z0PTwo ] != nnTag1 || 
-                    dpInteractionLattice[ x0POne + y0POne + z0PTwo ] != nnTag1  
-                ){
-                    printf("Wrong occupation in -z t2: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0Abs  + z0PTwo ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0POne + z0PTwo ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0Abs  + z0PTwo ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0POne + z0PTwo ]),
-                        uint32_t(r0.x)  , uint32_t(r0.y)  , uint32_t(r0.z)+2 ,
-                        uint32_t(r0.x)  , uint32_t(r0.y)+1, uint32_t(r0.z)+2 ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)  , uint32_t(r0.z)+2 ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)+1, uint32_t(r0.z)+2 ,id
-                    );
-                }
                 dpInteractionLattice[ x0Abs  + y0Abs  + z0Abs ] = nnTag1;
                 dpInteractionLattice[ x0Abs  + y0POne + z0Abs ] = nnTag1;
                 dpInteractionLattice[ x0POne + y0Abs  + z0Abs ] = nnTag1;
@@ -844,44 +665,9 @@ Method              const              met
                 dpInteractionLattice[ x0POne + y0Abs  + z0PTwo ] = nnTag2;
                 dpInteractionLattice[ x0POne + y0POne + z0PTwo ] = nnTag2;
                 }
-
                 break;
             case 5:{ //+z
                 T_InteractionTag nnTag1(dpInteractionLattice[ x0Abs + y0Abs + z0MOne  ]);
-                if ( 
-                    dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] != nnTag2 || 
-                    dpInteractionLattice[ x0Abs  + y0POne + z0POne ] != nnTag2 || 
-                    dpInteractionLattice[ x0POne + y0Abs  + z0POne ] != nnTag2 || 
-                    dpInteractionLattice[ x0POne + y0POne + z0POne ] != nnTag2  
-                ){
-                    printf("Wrong occupation in +z t1: %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0POne + z0POne ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0Abs  + z0POne ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0POne + z0POne ]),
-                        uint32_t(r0.x)  , uint32_t(r0.y)  , uint32_t(r0.z)+1 ,
-                        uint32_t(r0.x)  , uint32_t(r0.y)+1, uint32_t(r0.z)+1 ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)  , uint32_t(r0.z)+1 ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)+1, uint32_t(r0.z)+1 ,id
-                    );
-                }
-                if ( 
-                    dpInteractionLattice[ x0Abs  + y0Abs  + z0MOne ] != nnTag1 || 
-                    dpInteractionLattice[ x0Abs  + y0POne + z0MOne ] != nnTag1 || 
-                    dpInteractionLattice[ x0POne + y0Abs  + z0MOne ] != nnTag1 || 
-                    dpInteractionLattice[ x0POne + y0POne + z0MOne ] != nnTag1  
-                ){
-                    printf("Wrong occupation in +z t2 : %d %d %d %d at (%d,%d,%d),(%d,%d,%d),(%d,%d,%d),(%d,%d,%d) id=%d\n",
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0Abs  + z0MOne ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0Abs  + y0POne + z0MOne ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0Abs  + z0MOne ]),
-                        static_cast<uint32_t>(dpInteractionLattice[ x0POne + y0POne + z0MOne ]),
-                        uint32_t(r0.x)  , uint32_t(r0.y)  , uint32_t(r0.z)-1 ,
-                        uint32_t(r0.x)  , uint32_t(r0.y)+1, uint32_t(r0.z)-1 ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)  , uint32_t(r0.z)-1 ,
-                        uint32_t(r0.x)+1, uint32_t(r0.y)+1, uint32_t(r0.z)-1 ,id
-                    );
-                }
                 dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = nnTag1;
                 dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag1;
                 dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag1;
@@ -1121,8 +907,8 @@ void UpdaterGPU_Interaction<T_UCoordinateCuda>::setNNInteraction(
     if(0<typeA && typeA<=maxInteractionType && 0<typeB && typeB<=maxInteractionType){
         interactionTable[typeA+1][typeB+1]=energy;
         interactionTable[typeB+1][typeA+1]=energy;
-        probabilityLookup[typeA+1][typeB+1]=exp(energy);
-        probabilityLookup[typeB+1][typeA+1]=exp(energy);
+        probabilityLookup[typeA+1][typeB+1]=exp(-energy);
+        probabilityLookup[typeB+1][typeA+1]=exp(-energy);
         std::cout<<"set interation between types ";
         std::cout<<typeA<<" and "<<typeB<<" to "<<energy<<"kT\n";
     } else {
@@ -1184,7 +970,6 @@ void UpdaterGPU_Interaction< T_UCoordinateCuda >::runSimulationOnGPU(
          *  - each particle could be touched, not just one group */
         for ( uint32_t iSubStep = 0; iSubStep < nSpecies; ++iSubStep ) 
 		{
-            // uint32_t iSubStep = 0;
             auto const iStepTotal = iStep * nSpecies + iSubStep;
             auto  iOffsetLatticeTmp = ( iStepTotal % mnLatticeTmpBuffers )
             * ( mBoxX * mBoxY * mBoxZ * sizeof( mLatticeTmp->gpu[0] ));
@@ -1207,11 +992,8 @@ void UpdaterGPU_Interaction< T_UCoordinateCuda >::runSimulationOnGPU(
             this-> template launch_CheckSpecies<6>(nBlocks, nThreads, iSpecies, iOffsetLatticeTmp, seed);
             // 	this-> template launch_CheckSpecies<18>(nBlocks, nThreads, iSpecies, iOffsetLatticeTmp, seed);
             launch_CheckSpeciesInteraction(nBlocks, nThreads, iSpecies,seed );
-            // launch_resetInteractionLattice(nBlocks,nThreads,iSpecies);
             launch_PerformSpeciesAndApply(nBlocks, nThreads, iSpecies, texLatticeTmp );
             launch_ApplyInteraction(nBlocks, nThreads, iSpecies);
-            // checkInteractionLatticeOccupation();
-            // launch_initializeInteractionLattice(nBlocks,nThreads,iSpecies);
 			
             if(met.getPacking().getNBufferedTmpLatticeOn()){
                 /* we only need to delete when buffers will wrap around and
@@ -1226,19 +1008,18 @@ void UpdaterGPU_Interaction< T_UCoordinateCuda >::runSimulationOnGPU(
             chooseThreads.analyze(iSpecies,mStream);
 		} // iSubstep
     } // iStep
-    CUDA_ERROR( cudaStreamSynchronize( mStream ) );
     std::clock_t const t1 = std::clock();
     double const dt = float(t1-t0) / CLOCKS_PER_SEC;
     mLog( "Info" )
         << "run time (GPU): " << nMonteCarloSteps << "\n"
         << "mcs = " << nMonteCarloSteps  << "  speed [performed monomer try and move/s] = MCS*N/t: "
         << nMonteCarloSteps * ( mnAllMonomers / dt )  << "     runtime[s]:" << dt << "\n";
-	checkSystem(); // no-op if "Check"-level deactivated
-    checkInteractionLatticeOccupation();
-    CUDA_ERROR( cudaStreamSynchronize( mStream ) );
+    if (mLog.isActive( "Check" ) ){
+        CUDA_ERROR( cudaStreamSynchronize( mStream ) );
+        checkSystem(); // no-op if "Check"-level deactivated
+        checkInteractionLatticeOccupation();
+    }
     BaseClass::doCopyBack();
-    // if (mLog.isActive( "Check" ) )
-    
 }
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
