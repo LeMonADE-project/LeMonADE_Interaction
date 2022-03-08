@@ -29,7 +29,7 @@
 #
 # CMAKE_MINIMUM_REQUIRED (VERSION 3.1)
 CMAKE_MINIMUM_REQUIRED (VERSION 2.8)
-PROJECT (LeMonADE_ABStarNetworks)
+PROJECT (LeMonADE_Interaction)
 SET (APPLICATION_NAME "LeMonADE_Interaction") # 
 SET (APPLICATION_CODENAME "${PROJECT_NAME}")
 SET (APPLICATION_COPYRIGHT_YEARS "2022")
@@ -45,14 +45,14 @@ SET (APPLICATION_ID "${APPLICATION_VENDOR_ID}.${PROJECT_NAME}")
 #
 
 #define possible flags
-SET (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -msse2 -mssse3 -std=c++11 -fexpensive-optimizations ")
-SET (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -msse2 -mssse3 -std=c++11 -fexpensive-optimizations ")
+SET (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -msse2 -mssse3 -std=c++11 -fexpensive-optimizations -D__CORRECT_ISO_CPP11_MATH_H_PROTO ")
+SET (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -msse2 -mssse3 -std=c++11 -fexpensive-optimizations -D__CORRECT_ISO_CPP11_MATH_H_PROTO ")
 
-SET (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -Wall -DDEBUG -std=c++11")
-SET (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -Wall -DDEBUG -std=c++11")
+SET (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -Wall -DDEBUG -std=c++11 -D__CORRECT_ISO_CPP11_MATH_H_PROTO ")
+SET (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -Wall -DDEBUG -std=c++11 -D__CORRECT_ISO_CPP11_MATH_H_PROTO ")
 
-SET (CMAKE_CXX_FLAGS_PROFIL "${CMAKE_CXX_FLAGS_PROFIL} -O3 -pg -msse2 -mssse3 -std=c++11 -fexpensive-optimizations ")
-SET (CMAKE_C_FLAGS_PROFIL "${CMAKE_C_FLAGS_PROFIL} -O3 -pg -msse2 -mssse3 -std=c++11 -fexpensive-optimizations ")
+SET (CMAKE_CXX_FLAGS_PROFIL "${CMAKE_CXX_FLAGS_PROFIL} -O3 -pg -msse2 -mssse3 -std=c++11 -fexpensive-optimizations -D__CORRECT_ISO_CPP11_MATH_H_PROTO ")
+SET (CMAKE_C_FLAGS_PROFIL "${CMAKE_C_FLAGS_PROFIL} -O3 -pg -msse2 -mssse3 -std=c++11 -fexpensive-optimizations -D__CORRECT_ISO_CPP11_MATH_H_PROTO ")
 
 #define value of CMAKE_BUILD_TYPE depending on input
 IF(NOT CMAKE_BUILD_TYPE)
@@ -98,7 +98,7 @@ set( MINIMAL_CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}
     -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}
     ${NVCC_EXPERIMENTAL_FLAG}-relaxed-constexpr
 )
-set( CUDA_NVCC_FLAGS ${MINIMAL_CUDA_NVCC_FLAGS} " --compiler-options -Wall,-Wextra" )
+set( CUDA_NVCC_FLAGS ${MINIMAL_CUDA_NVCC_FLAGS} " --compiler-options -Wall,-Wextra -std=c++11 -D__CORRECT_ISO_CPP11_MATH_H_PROTO" )
 
 
 #
