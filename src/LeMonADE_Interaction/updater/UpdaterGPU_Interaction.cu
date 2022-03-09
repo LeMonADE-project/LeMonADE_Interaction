@@ -463,6 +463,42 @@ __device__ inline double calcInteractionProbability(
             if(dz==0){prop=1./prop;}
             break;
         //TODO : Add diagonal moves 
+        case 6: 
+            prop*=getProbability(typeA, dpInteractionLattice[ x0PAbs + y0PTwo + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0PAbs + y0PTwo + z0Abs  ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0Abs  ]);
+
+            prop*=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0POne + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0PTwo + y0Abs  + z0Abs  ]);
+
+            prop*=getProbability(typeA, dpInteractionLattice[ x0PAbs + y0PTwo + z0Abs ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0Abs ]);
+            prop*=getProbability(typeA, dpInteractionLattice[ x0POne + y0PTwo + z0Abs ]);
+            
+            
+
+        case 9:
+            break;
+        case 7: 
+        case 8: 
+            break;
+
+        case 10: 
+        case 13:
+            break;
+        case 11: 
+        case 12: 
+        break;
+
+        case 14: 
+        case 17:
+            break;
+        case 15: 
+        case 16: 
+            break;
     }
     return prop;
 }
@@ -646,6 +682,210 @@ Method              const              met
                 dpInteractionLattice[ x0POne + y0POne + z0MOne  ] = nnTag2;
                 }
                 break;
+            case 6:{// xy
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0MOne + y0MOne + z0Abs ]);
+
+                dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0POne + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag1;
+
+                dpInteractionLattice[ x0MOne + y0MOne + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0MOne + y0Abs  + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0MOne + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0MOne + y0MOne + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0MOne + y0Abs  + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0MOne + z0POne ] = nnTag2;                
+            }break;
+            case 7:{//x-y
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0MOne + y0PTwo + z0Abs ]);
+
+                dpInteractionLattice[ x0POne + y0MOne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0MOne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0MOne + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0MOne + z0POne ] = nnTag1;
+
+                dpInteractionLattice[ x0MOne + y0PTwo + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0MOne + y0POne + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0PTwo + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0MOne + y0PTwo + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0MOne + y0POne + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ] = nnTag2;
+            }break;
+            case 8:{//-xy
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0PTwo + y0MOne + z0Abs  ]);
+
+                dpInteractionLattice[ x0MOne + y0POne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0MOne + y0Abs  + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0MOne + y0POne + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0MOne + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag1;
+
+                dpInteractionLattice[ x0PTwo + y0MOne + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0PTwo + y0Abs  + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0MOne + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0PTwo + y0MOne + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0MOne + z0POne ] = nnTag2; 
+            }break;
+            case 9:{//-x-y
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0PTwo + y0PTwo + z0Abs ]);
+
+                dpInteractionLattice[ x0MOne + y0MOne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0MOne + y0Abs  + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0MOne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0MOne + y0MOne + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0MOne + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0MOne + z0POne ] = nnTag1;
+
+                dpInteractionLattice[ x0PTwo + y0PTwo + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0PTwo + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0PTwo + y0PTwo + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0PTwo + y0POne + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0PTwo + z0POne ] = nnTag2; 
+            }break;
+            case 10:{//yz
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0Abs  + y0MOne + z0MOne ]);
+
+                dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0POne + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag1;
+
+                dpInteractionLattice[ x0Abs  + y0MOne + z0MOne ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0MOne ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0MOne + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0MOne + z0MOne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0Abs  + z0MOne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0MOne + z0Abs  ] = nnTag2; 
+            }break;
+            case 11:{//y-z
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0Abs  + y0MOne + z0PTwo ]);
+
+                dpInteractionLattice[ x0Abs  + y0POne + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0POne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0POne + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs  + z0MOne ] = nnTag1;
+
+                dpInteractionLattice[ x0Abs  + y0MOne + z0PTwo ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0MOne + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0PTwo ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0MOne + z0PTwo ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0MOne + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0Abs  + z0PTwo ] = nnTag2; 
+            }break;
+            case 12:{//-yz
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0Abs  + y0PTwo + z0MOne ]);
+
+                dpInteractionLattice[ x0Abs  + y0MOne + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0MOne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0MOne + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0MOne + z0Abs  ] = nnTag1;
+
+                dpInteractionLattice[ x0Abs  + y0PTwo + z0MOne ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0POne + z0MOne ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0PTwo + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0PTwo + z0MOne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0POne + z0MOne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0PTwo + z0Abs  ] = nnTag2; 
+            }break;
+            case 13:{//-y-z
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0Abs  + y0PTwo + z0MTwo ]);
+
+                dpInteractionLattice[ x0Abs  + y0MOne + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0MOne + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0MOne + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs  + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0MOne + z0Abs  ] = nnTag1;
+
+                dpInteractionLattice[ x0Abs  + y0PTwo + z0MTwo ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0POne + z0MTwo ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0PTwo + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0PTwo + z0MTwo ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0POne + z0MTwo ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0PTwo + z0POne ] = nnTag2; 
+            }break;
+            case 14:{//zx
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0MOne + y0Abs  + z0MOne ]);
+
+                dpInteractionLattice[ x0POne + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0POne + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag1;
+
+                dpInteractionLattice[ x0MOne + y0Abs  + z0MOne ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0MOne ] = nnTag2;
+                dpInteractionLattice[ x0MOne + y0Abs  + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0MOne + y0POne + z0MOne ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0POne + z0MOne ] = nnTag2;
+                dpInteractionLattice[ x0MOne + y0POne + z0Abs  ] = nnTag2; 
+            }break;
+            case 15:{//z-x
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0PTwo + y0Abs  + z0MOne ]);
+
+                dpInteractionLattice[ x0MOne + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0MOne + y0Abs  + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0MOne + y0POne + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0POne + z0POne ] = nnTag1;
+                dpInteractionLattice[ x0MOne + y0POne + z0Abs  ] = nnTag1;
+
+                dpInteractionLattice[ x0PTwo + y0Abs  + z0MOne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0Abs  + z0MOne ] = nnTag2;
+                dpInteractionLattice[ x0PTwo + y0Abs  + z0Abs  ] = nnTag2;
+                dpInteractionLattice[ x0PTwo + y0POne + z0MOne ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0POne + z0MOne ] = nnTag2;
+                dpInteractionLattice[ x0PTwo + y0POne + z0Abs  ] = nnTag2; 
+            }break;
+            case 16:{//-zx
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0MOne + y0Abs  + z0PTwo ]);
+
+                dpInteractionLattice[ x0POne + y0Abs  + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0Abs  + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0POne + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0POne + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0POne + y0POne + z0Abs  ] = nnTag1;
+
+                dpInteractionLattice[ x0MOne + y0Abs  + z0PTwo ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0PTwo ] = nnTag2;
+                dpInteractionLattice[ x0MOne + y0Abs  + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0MOne + y0POne + z0PTwo ] = nnTag2;
+                dpInteractionLattice[ x0Abs  + y0POne + z0PTwo ] = nnTag2;
+                dpInteractionLattice[ x0MOne + y0POne + z0POne ] = nnTag2; 
+            }break;
+            case 17:{//-z-x
+                T_InteractionTag const nnTag1(dpInteractionLattice[ x0PTwo + y0Abs  + z0PTwo ]);
+
+                dpInteractionLattice[ x0MOne + y0Abs  + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0Abs  + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0MOne + y0Abs  + z0Abs  ] = nnTag1;
+                dpInteractionLattice[ x0MOne + y0POne + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0Abs  + y0POne + z0MOne ] = nnTag1;
+                dpInteractionLattice[ x0MOne + y0POne + z0Abs  ] = nnTag1;
+
+                dpInteractionLattice[ x0PTwo + y0Abs  + z0PTwo ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0Abs  + z0PTwo ] = nnTag2;
+                dpInteractionLattice[ x0PTwo + y0Abs  + z0POne ] = nnTag2;
+                dpInteractionLattice[ x0PTwo + y0POne + z0PTwo ] = nnTag2;
+                dpInteractionLattice[ x0POne + y0POne + z0PTwo ] = nnTag2;
+                dpInteractionLattice[ x0PTwo + y0POne + z0POne ] = nnTag2; 
+            }break;
         }
     }
 }
@@ -953,9 +1193,11 @@ void UpdaterGPU_Interaction< T_UCoordinateCuda >::runSimulationOnGPU(
             // auto const useCudaMemset = chooseThreads.useCudaMemset(iSpecies);
             chooseThreads.addRecord(iSpecies, mStream);
             nSpeciesChosen[ iSpecies ] += 1;
-            // if (!diagMovesOn)
-            this-> template launch_CheckSpecies<6>(nBlocks, nThreads, iSpecies, iOffsetLatticeTmp, seed);
-            // 	this-> template launch_CheckSpecies<18>(nBlocks, nThreads, iSpecies, iOffsetLatticeTmp, seed);
+            if ( diagMovesOn )
+                this-> template launch_CheckSpecies<18>(nBlocks, nThreads, iSpecies, iOffsetLatticeTmp, seed);
+            else 
+                this-> template launch_CheckSpecies<6>(nBlocks, nThreads, iSpecies, iOffsetLatticeTmp, seed);
+            	
             launch_CheckSpeciesInteraction(nBlocks, nThreads, iSpecies,seed );
             launch_PerformSpeciesAndApply(nBlocks, nThreads, iSpecies, texLatticeTmp );
             launch_ApplyInteraction(nBlocks, nThreads, iSpecies);

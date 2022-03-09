@@ -28,7 +28,8 @@ int main(int argc, char* argv[])
 	std::string input("config.bfm");
 	std::string output("output.bfm");
     double energy = 10.0; 
-	int      iGpuToUse       = 0;
+	int iGpuToUse = 0;
+	int diagonalMoves = 0; 
 	
 	try 
 	{
@@ -41,6 +42,7 @@ int main(int argc, char* argv[])
 		cmd.addOption("-s" ,1,"interval/step size" );
 		cmd.addOption("-m" ,1,"maximum MCS"        );
         cmd.addOption("-e" ,1,"bond energy"        );
+		cmd.addOption("-d" ,1,"diagonal moves"     );
 		cmd.addOption("-h" ,0,"display help" );
 		//parse command line options
 		cmd.parse(argv+1,argc-1);
@@ -53,6 +55,7 @@ int main(int argc, char* argv[])
 		cmd.getOption("-i", input   );
 		cmd.getOption("-o", output  );            
 		cmd.getOption("-s", interval);
+		cmd.getOption("-d", diagonalMoves);
 		cmd.getOption("-m", nMCS    );
         cmd.getOption("-e", energy  );
 		//////////////////////////////////////////////////////////////////////
@@ -72,7 +75,7 @@ int main(int argc, char* argv[])
 
     RandomNumberGenerators rng;
     rng.seedAll();
-	auto const pUpdaterGpu = new WrapperUpdaterGPU_Interaction<IngredientsType>( ingredients, interval );
+	auto const pUpdaterGpu = new WrapperUpdaterGPU_Interaction<IngredientsType>( ingredients, interval, diagonalMoves );
 	pUpdaterGpu->setGpu( iGpuToUse );
 	pUpdaterGpu->activateLogging( "Error"     );
 	// pUpdaterGpu->activateLogging( "Check"     );
