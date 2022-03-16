@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
 	auto const pUpdaterGpu = new WrapperUpdaterGPU_Interaction<IngredientsType>( ingredients, interval, diagonalMoves );
 	pUpdaterGpu->setGpu( iGpuToUse );
 	pUpdaterGpu->activateLogging( "Error"     );
-	pUpdaterGpu->activateLogging( "Check"     );
+	// pUpdaterGpu->activateLogging( "Check"     );
 	//pUpdaterGpu->activateLogging( "Stats"      );
 	pUpdaterGpu->activateLogging( "Info"      );
 	pUpdaterGpu->setSplitColors( 0 );
