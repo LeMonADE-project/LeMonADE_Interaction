@@ -812,7 +812,7 @@ __device__ inline double calcInteractionProbability(
         auto direction = properties & T_Flags(31); // 7=0b111 31=0b11111
         auto const r0 = dpPolymerSystem[ id ];
         auto const intProp(calcInteractionProbability( dpInteractionLattice, r0.x, r0.y, r0.z, direction, met ));
-        Saru rng(rGlobalIteration,id+iOffset,rSeed);
+        Saru rng(rSeed,rGlobalIteration,id+iOffset);
         if ( rng.rng_d() < intProp ) {
              /* move is still allowed */
             direction += T_Flags(32);
@@ -1349,6 +1349,7 @@ void UpdaterGPU_Interaction< T_UCoordinateCuda >::runSimulationOnGPU(
             /* randomly choose which monomer group to advance */
             auto const iSpecies = randomNumbers.r250_rand32() % nSpecies;
             auto const seed     = randomNumbers.r250_rand32();
+            auto const seed2    = randomNumbers.r250_rand32();
             auto const nThreads = chooseThreads.getBestThread(iSpecies);
             auto const nBlocks  = ceilDiv( mnElementsInGroup[ iSpecies ], nThreads );
             // auto const useCudaMemset = chooseThreads.useCudaMemset(iSpecies);
@@ -1359,7 +1360,7 @@ void UpdaterGPU_Interaction< T_UCoordinateCuda >::runSimulationOnGPU(
             else 
                 this-> template launch_CheckSpecies<6>(nBlocks, nThreads, iSpecies, iOffsetLatticeTmp, seed);
             	
-            launch_CheckSpeciesInteraction(nBlocks, nThreads, iSpecies,seed );
+            launch_CheckSpeciesInteraction(nBlocks, nThreads, iSpecies,seed2 );
             launch_PerformSpeciesAndApply(nBlocks, nThreads, iSpecies, texLatticeTmp );
             launch_ApplyInteraction(nBlocks, nThreads, iSpecies);
 			
